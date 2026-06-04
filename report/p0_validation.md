@@ -57,3 +57,5 @@ python scripts/run_p0.py --config configs/baseline/p0_smoke.json
 严格预检必须确认 `nvcc`、`g++`、`ninja` 可用，并成功编译、执行官方融合 CUDA 算子。
 目标机 P0 通过后，以目标机生成的 `results/logs/environment.json` 和训练日志替换本地记录。
 环境记录包含依赖清单、主仓库状态、后端提交、后端补丁状态、GPU 和 CUDA 工具链信息。
+
+注意：即使训练配置使用 `metrics=none`，官方训练入口在导入指标模块时仍依赖 `scipy`。

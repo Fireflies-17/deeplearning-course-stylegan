@@ -18,7 +18,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from stylegan_course.project import load_config, require_backend  # noqa: E402
 
 
-REQUIRED_PACKAGES = ["click", "numpy", "PIL", "requests", "torch", "tqdm"]
+REQUIRED_PACKAGES = ["click", "numpy", "PIL", "requests", "scipy", "torch", "tqdm"]
 RECOMMENDED_PACKAGES = ["ninja", "pyspng", "imageio_ffmpeg"]
 
 
