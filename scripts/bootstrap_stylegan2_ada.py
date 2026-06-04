@@ -19,7 +19,10 @@ from stylegan_course.project import (  # noqa: E402
 )
 
 
-PATCH = ROOT / "patches" / "stylegan2-ada-pytorch-modern-pytorch.patch"
+PATCHES = [
+    ROOT / "patches" / "stylegan2-ada-pytorch-modern-pytorch.patch",
+    ROOT / "patches" / "stylegan2-ada-pytorch-modern-warnings.patch",
+]
 
 
 def git_output(*args: str) -> str:
@@ -36,18 +39,18 @@ def git_succeeds(*args: str) -> bool:
     return result.returncode == 0
 
 
-def apply_compatibility_patch(target: Path, verify_only: bool) -> None:
-    if not PATCH.is_file():
-        raise SystemExit("Compatibility patch is missing: {}".format(PATCH))
-    if git_succeeds("-C", str(target), "apply", "--reverse", "--check", str(PATCH)):
-        print("Modern PyTorch compatibility patch already applied.")
+def apply_compatibility_patch(target: Path, patch: Path, verify_only: bool) -> None:
+    if not patch.is_file():
+        raise SystemExit("Compatibility patch is missing: {}".format(patch))
+    if git_succeeds("-C", str(target), "apply", "--reverse", "--check", str(patch)):
+        print("Compatibility patch already applied: {}".format(patch.name))
         return
     if verify_only:
-        raise SystemExit("Modern PyTorch compatibility patch is not applied.")
-    if not git_succeeds("-C", str(target), "apply", "--check", str(PATCH)):
-        raise SystemExit("Compatibility patch does not apply cleanly: {}".format(PATCH))
-    subprocess.run(["git", "-C", str(target), "apply", str(PATCH)], check=True)
-    print("Applied modern PyTorch compatibility patch.")
+        raise SystemExit("Compatibility patch is not applied: {}".format(patch))
+    if not git_succeeds("-C", str(target), "apply", "--check", str(patch)):
+        raise SystemExit("Compatibility patch does not apply cleanly: {}".format(patch))
+    subprocess.run(["git", "-C", str(target), "apply", str(patch)], check=True)
+    print("Applied compatibility patch: {}".format(patch.name))
 
 
 def main() -> None:
@@ -88,7 +91,8 @@ def main() -> None:
         )
         current = git_output("-C", str(target), "rev-parse", "HEAD")
 
-    apply_compatibility_patch(target, verify_only=args.verify_only)
+    for patch in PATCHES:
+        apply_compatibility_patch(target, patch, verify_only=args.verify_only)
     print("StyleGAN2-ADA backend ready: {}".format(current))
 
 

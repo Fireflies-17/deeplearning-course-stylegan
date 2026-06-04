@@ -1,0 +1,136 @@
+diff --git a/dataset_tool.py b/dataset_tool.py
+index c59e629..50af83c 100755
+--- a/dataset_tool.py
++++ b/dataset_tool.py
+@@ -217,7 +217,7 @@ def make_transform(
+     def center_crop(width, height, img):
+         crop = np.min(img.shape[:2])
+         img = img[(img.shape[0] - crop) // 2 : (img.shape[0] + crop) // 2, (img.shape[1] - crop) // 2 : (img.shape[1] + crop) // 2]
+-        img = PIL.Image.fromarray(img, 'RGB')
++        img = PIL.Image.fromarray(img)
+         img = img.resize((width, height), resample)
+         return np.array(img)
+ 
+@@ -227,7 +227,7 @@ def make_transform(
+             return None
+ 
+         img = img[(img.shape[0] - ch) // 2 : (img.shape[0] + ch) // 2]
+-        img = PIL.Image.fromarray(img, 'RGB')
++        img = PIL.Image.fromarray(img)
+         img = img.resize((width, height), resample)
+         img = np.array(img)
+ 
+@@ -426,7 +426,7 @@ def convert_dataset(
+             error(f'Image {archive_fname} attributes must be equal across all images of the dataset.  Got:\n' + '\n'.join(err))
+ 
+         # Save the image as an uncompressed PNG.
+-        img = PIL.Image.fromarray(img, { 1: 'L', 3: 'RGB' }[channels])
++        img = PIL.Image.fromarray(img)
+         image_bits = io.BytesIO()
+         img.save(image_bits, format='png', compress_level=0, optimize=False)
+         save_bytes(os.path.join(archive_root_dir, archive_fname), image_bits.getbuffer())
+diff --git a/generate.py b/generate.py
+index f7f9619..0900680 100755
+--- a/generate.py
++++ b/generate.py
+@@ -96,7 +96,7 @@ def generate_images(
+         for idx, w in enumerate(ws):
+             img = G.synthesis(w.unsqueeze(0), noise_mode=noise_mode)
+             img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+-            img = PIL.Image.fromarray(img[0].cpu().numpy(), 'RGB').save(f'{outdir}/proj{idx:02d}.png')
++            img = PIL.Image.fromarray(img[0].cpu().numpy()).save(f'{outdir}/proj{idx:02d}.png')
+         return
+ 
+     if seeds is None:
+@@ -118,7 +118,7 @@ def generate_images(
+         z = torch.from_numpy(np.random.RandomState(seed).randn(1, G.z_dim)).to(device)
+         img = G(z, label, truncation_psi=truncation_psi, noise_mode=noise_mode)
+         img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+-        PIL.Image.fromarray(img[0].cpu().numpy(), 'RGB').save(f'{outdir}/seed{seed:04d}.png')
++        PIL.Image.fromarray(img[0].cpu().numpy()).save(f'{outdir}/seed{seed:04d}.png')
+ 
+ 
+ #----------------------------------------------------------------------------
+diff --git a/projector.py b/projector.py
+index 36041a0..9eb1be2 100755
+--- a/projector.py
++++ b/projector.py
+@@ -201,7 +201,7 @@ def run_projection(
+     synth_image = G.synthesis(projected_w.unsqueeze(0), noise_mode='const')
+     synth_image = (synth_image + 1) * (255/2)
+     synth_image = synth_image.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
+-    PIL.Image.fromarray(synth_image, 'RGB').save(f'{outdir}/proj.png')
++    PIL.Image.fromarray(synth_image).save(f'{outdir}/proj.png')
+     np.savez(f'{outdir}/projected_w.npz', w=projected_w.unsqueeze(0).cpu().numpy())
+ 
+ #----------------------------------------------------------------------------
+diff --git a/style_mixing.py b/style_mixing.py
+index c47bebb..db2730f 100755
+--- a/style_mixing.py
++++ b/style_mixing.py
+@@ -91,7 +91,7 @@ def generate_style_mix(
+     print('Saving images...')
+     os.makedirs(outdir, exist_ok=True)
+     for (row_seed, col_seed), image in image_dict.items():
+-        PIL.Image.fromarray(image, 'RGB').save(f'{outdir}/{row_seed}-{col_seed}.png')
++        PIL.Image.fromarray(image).save(f'{outdir}/{row_seed}-{col_seed}.png')
+ 
+     print('Saving image grid...')
+     W = G.img_resolution
+@@ -106,7 +106,7 @@ def generate_style_mix(
+                 key = (col_seed, col_seed)
+             if col_idx == 0:
+                 key = (row_seed, row_seed)
+-            canvas.paste(PIL.Image.fromarray(image_dict[key], 'RGB'), (W * col_idx, H * row_idx))
++            canvas.paste(PIL.Image.fromarray(image_dict[key]), (W * col_idx, H * row_idx))
+     canvas.save(f'{outdir}/grid.png')
+ 
+ 
+diff --git a/torch_utils/ops/conv2d_gradfix.py b/torch_utils/ops/conv2d_gradfix.py
+index e95e10d..a5ae940 100755
+--- a/torch_utils/ops/conv2d_gradfix.py
++++ b/torch_utils/ops/conv2d_gradfix.py
+@@ -9,7 +9,6 @@
+ """Custom replacement for `torch.nn.functional.conv2d` that supports
+ arbitrarily high order gradients with zero performance penalty."""
+ 
+-import warnings
+ import contextlib
+ import torch
+ 
+@@ -52,7 +51,6 @@ def _should_use_custom_op(input):
+         return False
+     if any(torch.__version__.startswith(x) for x in ['1.7.', '1.8.', '1.9']):
+         return True
+-    warnings.warn(f'conv2d_gradfix not supported on PyTorch {torch.__version__}. Falling back to torch.nn.functional.conv2d().')
+     return False
+ 
+ def _tuple_of_ints(xs, ndim):
+diff --git a/torch_utils/ops/grid_sample_gradfix.py b/torch_utils/ops/grid_sample_gradfix.py
+index 612f5fb..1acf199 100755
+--- a/torch_utils/ops/grid_sample_gradfix.py
++++ b/torch_utils/ops/grid_sample_gradfix.py
+@@ -11,7 +11,6 @@ supports arbitrarily high order gradients between the input and output.
+ Only works on 2D images and assumes
+ `mode='bilinear'`, `padding_mode='zeros'`, `align_corners=False`."""
+ 
+-import warnings
+ import torch
+ 
+ # pylint: disable=redefined-builtin
+diff --git a/training/training_loop.py b/training/training_loop.py
+index 14836ad..5b096c4 100755
+--- a/training/training_loop.py
++++ b/training/training_loop.py
+@@ -79,9 +79,9 @@ def save_image_grid(img, fname, drange, grid_size):
+ 
+     assert C in [1, 3]
+     if C == 1:
+-        PIL.Image.fromarray(img[:, :, 0], 'L').save(fname)
++        PIL.Image.fromarray(img[:, :, 0]).save(fname)
+     if C == 3:
+-        PIL.Image.fromarray(img, 'RGB').save(fname)
++        PIL.Image.fromarray(img).save(fname)
+ 
+ #----------------------------------------------------------------------------
+ 

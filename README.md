@@ -2,20 +2,21 @@
 
 更新时间：2026-06-04
 
-当前阶段：**P0 流程验证**
+当前阶段：**P0 验收收尾**
 
-当前阻塞项：在目标 RTX PRO 6000 机器上完成严格 P0 验收。
+当前阻塞项：补回目标 RTX PRO 6000 机器生成的环境记录，并验证默认 `bgc` ADA 增强短跑。
 
 ## 近期任务
 
 - [x] 选择 Ubuntu 22.04、Python 3.12、PyTorch 2.8、CUDA 12.8 **devel** 镜像；
-- [ ] 将项目迁移到 RTX PRO 6000 96GB 目标机器；
-- [ ] 安装 `requirements-gpu.txt` 中的附加依赖；
-- [ ] 运行 `python scripts/bootstrap_stylegan2_ada.py`；
-- [ ] 运行 `python scripts/preflight.py --strict`，确认融合 CUDA 算子可编译并执行；
-- [ ] 运行 `python scripts/run_p0.py --config configs/baseline/p0_smoke.json`；
-- [ ] 检查目标机环境记录、训练日志、快照、生成样本和 P0 指标文件；
-- [ ] 根据目标机结果更新 `report/p0_validation.md`。
+- [x] 将项目迁移到 RTX PRO 6000 96GB 目标机器；
+- [x] 安装 `requirements-gpu.txt` 中的附加依赖；
+- [x] 运行 `python scripts/bootstrap_stylegan2_ada.py`；
+- [x] 运行 `python scripts/preflight.py --strict`，确认严格预检通过；
+- [x] 运行 `python scripts/run_p0.py --config configs/baseline/p0_smoke.json`；
+- [x] 检查目标机训练日志、快照、生成样本和 P0 指标文件；
+- [x] 根据目标机结果更新 `report/p0_validation.md`；
+- [ ] 将目标机生成的 `results/logs/environment.json` 同步回本地。
 
 ## P0：流程验证
 
@@ -29,8 +30,8 @@
 - [x] 建立软硬件环境记录脚本；
 - [x] 建立 GPU、CUDA 工具链与融合算子严格预检；
 - [x] 在本地完成训练、快照加载、继续训练、生成和轻量指标端到端验证；
-- [x] 通过 4 项不依赖 GPU 的单元测试；
-- [ ] 在目标 RTX PRO 6000 机器上通过严格 P0 流程；
+- [x] 通过 5 项不依赖 GPU 的单元测试；
+- [x] 在目标 RTX PRO 6000 机器上通过严格 P0 流程；
 - [ ] 在目标机器上验证默认 `bgc` ADA 增强短跑；
 
 详细记录：`report/p0_validation.md`
