@@ -1,3 +1,33 @@
-/stylegan
+# Local legacy reference implementation (TensorFlow 1.x).
+/third_party/stylegan/
+
+# Bootstrapped third-party backend. Recreate with scripts/bootstrap_stylegan2_ada.py.
+/third_party/stylegan2-ada-pytorch/
+
+# Local environments and caches.
+/.venv/
+/env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.idea/
+.vscode/
+
+# Large and generated experiment artifacts.
+/data/raw/
+/data/processed/
+/checkpoints/*
+!/checkpoints/README.md
+/results/runs/
+/results/logs/*
+!/results/logs/.gitkeep
+/results/samples/*
+!/results/samples/.gitkeep
+/results/tables/*
+!/results/tables/.gitkeep
+/results/figures/*
+!/results/figures/.gitkeep
+
+# Course materials currently kept outside version control.
 /报告模板.doc
 /课程设计梳理.md

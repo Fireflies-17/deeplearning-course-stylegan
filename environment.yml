@@ -1,0 +1,19 @@
+name: stylegan2-ada-course-blackwell
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - pip>=24.3
+  - numpy=1.26.4
+  - pillow=11.3.0
+  - pip:
+      - --extra-index-url=https://download.pytorch.org/whl/cu128
+      - torch==2.8.0+cu128
+      - torchvision==0.23.0+cu128
+      - click==8.2.1
+      - imageio-ffmpeg==0.6.0
+      - ninja==1.11.1.4
+      - pyspng==0.1.4
+      - requests==2.32.5
+      - tqdm==4.67.1
