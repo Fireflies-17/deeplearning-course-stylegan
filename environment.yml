@@ -14,7 +14,9 @@ dependencies:
       - torchvision==0.23.0+cu128
       - click==8.2.1
       - imageio-ffmpeg==0.6.0
+      - lmdb==1.6.2
       - ninja==1.11.1.4
+      - opencv-python-headless==4.11.0.86
       - pyspng==0.1.4
       - requests==2.32.5
       - tqdm==4.67.1

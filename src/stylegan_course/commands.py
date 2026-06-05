@@ -84,12 +84,15 @@ def build_generate_command(
     seeds: Optional[str] = None,
     trunc: Optional[float] = None,
     outdir: Optional[str] = None,
+    class_idx: Optional[int] = None,
 ) -> List[str]:
     generate = dict(config["generate"])
     if seeds is not None:
         generate["seeds"] = seeds
     if trunc is not None:
         generate["trunc"] = trunc
+    if class_idx is not None:
+        generate["class"] = class_idx
 
     command = [
         sys.executable,

@@ -19,7 +19,7 @@ from stylegan_course.project import load_config, require_backend  # noqa: E402
 
 
 REQUIRED_PACKAGES = ["click", "numpy", "PIL", "requests", "scipy", "torch", "tqdm"]
-RECOMMENDED_PACKAGES = ["ninja", "pyspng", "imageio_ffmpeg"]
+RECOMMENDED_PACKAGES = ["ninja", "pyspng", "imageio_ffmpeg", "lmdb", "cv2"]
 
 
 def package_status(names: List[str]) -> List[str]:

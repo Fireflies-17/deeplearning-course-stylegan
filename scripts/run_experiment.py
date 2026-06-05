@@ -57,6 +57,7 @@ def main() -> None:
     generate.add_argument("--seeds")
     generate.add_argument("--trunc", type=float)
     generate.add_argument("--outdir")
+    generate.add_argument("--class", dest="class_idx", type=int)
 
     evaluate = subparsers.add_parser("evaluate")
     add_common(evaluate)
@@ -86,6 +87,7 @@ def main() -> None:
             seeds=args.seeds,
             trunc=args.trunc,
             outdir=args.outdir,
+            class_idx=args.class_idx,
         )
     else:
         network = resolve_network(config, args.network)

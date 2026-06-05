@@ -10,11 +10,13 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.pycache_tmp/
 .idea/
 .vscode/
 
 # Large and generated experiment artifacts.
 /data/raw/
+/data/downloads/
 /data/processed/
 /checkpoints/*
 !/checkpoints/README.md
