@@ -1,6 +1,6 @@
 # Additional packages for the selected PyTorch 2.8 / Python 3.12 / CUDA 12.8 image.
 # PyTorch and torchvision are intentionally not reinstalled here.
-click==8.2.1
+click>=8.4.0,<9
 imageio-ffmpeg==0.6.0
 lmdb==1.6.2
 ninja==1.11.1.4
