@@ -109,9 +109,9 @@ python scripts/run_experiment.py train \
   --config configs/baseline/p1_lsun_church256_short.json
 ```
 
-短跑通过后启动 2000 kimg 基线候选。100 kimg 短跑实际耗时约 40 分钟，按该速度估算
-5000 kimg 需要 32 小时以上；为给 P2 对比实验和报告整理留出时间，本项目把 P1 基线预算
-固定为 2000 kimg。
+短跑通过后启动双卡 2000 kimg 基线候选。100 kimg 单卡短跑实际耗时约 40 分钟，按该速度估算
+5000 kimg 单卡需要 32 小时以上；为给 P2 对比实验和报告整理留出时间，本项目把 P1 基线预算
+固定为 2000 kimg，并从正式基线开始固定使用 2 张 GPU。
 
 ## 待补充验收
 
@@ -120,4 +120,4 @@ python scripts/run_experiment.py train \
 - [ ] 记录 `data/processed/lsun-church-256-100k.zip` 文件大小和校验值；
 - [ ] 确认转换日志显示图像数量为 100,000、分辨率为 256x256；
 - [ ] 运行 `configs/baseline/p1_lsun_church256_short.json` 完成 100 kimg 短跑；
-- [x] 根据短跑日志中的 sec/kimg 估算基线训练时间，并固定 2000 kimg 预算。
+- [x] 根据短跑日志中的 sec/kimg 估算基线训练时间，并固定双卡 2000 kimg 预算。

@@ -49,6 +49,7 @@ class CommandTests(unittest.TestCase):
         joined = " ".join(command)
         self.assertIn("--cfg=paper256", joined)
         self.assertIn("--cond=false", joined)
+        self.assertIn("--gpus=2", joined)
         self.assertIn("--kimg=2000", joined)
         self.assertIn("--snap=25", joined)
         self.assertIn("--metrics=fid50k_full", joined)

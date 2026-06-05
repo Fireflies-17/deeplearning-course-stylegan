@@ -7,7 +7,7 @@
   "outdir": "results/runs/p1-lsun-church256-100k-baseline",
   "samples_outdir": "results/samples/p1-lsun-church256-100k-baseline",
   "train": {
-    "gpus": 1,
+    "gpus": 2,
     "cfg": "paper256",
     "cond": false,
     "mirror": true,
@@ -26,6 +26,6 @@
   },
   "evaluate": {
     "metrics": "fid50k_full,kid50k_full,pr50k3_full",
-    "gpus": 1
+    "gpus": 2
   }
 }
