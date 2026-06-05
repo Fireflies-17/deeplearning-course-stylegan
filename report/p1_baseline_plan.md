@@ -43,11 +43,33 @@
 python -m pip install -r requirements-gpu.txt
 ```
 
-优先从 OpenDataLab 获取 LSUN Church Outdoor。OpenDataLab 的文件名和 CLI 数据集名可能调整，
-以页面显示的命令为准：
+不要下载 OpenDataLab 上的全量 LSUN 包；全量包约 TB 级，不适合本项目。P1 只需要
+`church_outdoor_train_lmdb.zip` 这个单类别训练包，公开镜像记录的文件大小约 2.45GB。
+
+优先直接下载并解压单类别包：
+
+```bash
+python scripts/download_lsun_church.py --extract
+```
+
+如果默认官方地址在中国大陆不可达，进入 OpenDataLab 的 LSUN 数据集页面，只选择
+Church Outdoor / `church_outdoor_train_lmdb.zip` 单文件下载，不要选择 full/all/complete
+全量下载包。OpenDataLab 的文件名和 CLI 数据集名可能调整，以页面显示的命令为准：
 
 ```text
 https://opendatalab.org.cn/OpenDataLab/lsun
+```
+
+`openxlab` 可以用于下载这个单文件，但不要长期留在 StyleGAN 训练环境中。它会把 `requests`、
+`rich` 和 `tqdm` 约束到旧版本，和目标机已有工具以及本项目依赖冲突。需要 CLI 下载时，
+优先单独创建临时下载环境；训练环境只保留 `requirements-gpu.txt` 中的依赖。
+
+如果只能在训练环境中临时安装 `openxlab` 下载数据，下载完成后先修复环境：
+
+```bash
+python -m pip uninstall -y openxlab
+python -m pip install -U -r requirements-gpu.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+python -m pip check
 ```
 
 将下载并解压后的 Church Outdoor 训练集整理为：
