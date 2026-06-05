@@ -43,11 +43,12 @@ def package_status(names: List[str]) -> List[str]:
 def check_python_build_packages() -> None:
     try:
         import setuptools  # noqa: F401
-        import pkg_resources  # noqa: F401
+        import torch.utils.cpp_extension  # noqa: F401
     except Exception as exc:
         raise SystemExit(
             "Python build packages are incompatible with this Python runtime. "
-            "PyTorch CUDA extension compilation imports setuptools before training. "
+            "PyTorch CUDA extension compilation imports setuptools and "
+            "torch.utils.cpp_extension before training. "
             "Run: {}".format(BUILD_PACKAGE_FIX)
         ) from exc
 
