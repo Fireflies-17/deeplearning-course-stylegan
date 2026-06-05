@@ -19,6 +19,7 @@
 - [ ] 将目标机生成的 `results/logs/environment.json` 同步回本地；
 - [x] 选择 AFHQ Cat 作为 P1 正式数据集，并记录许可证口径；
 - [x] 建立 `data/afhqcat512.md` 数据下载、转换和验收记录；
+- [x] 增加无法连接 Dropbox 时的 AFHQv2 Hugging Face 镜像下载脚本；
 - [x] 新增 P1 AFHQ Cat 512 短跑与基线训练配置；
 - [ ] 在目标机下载并转换 AFHQ Cat 数据；
 - [ ] 运行 P1 100 kimg 短跑并估算完整基线时间。

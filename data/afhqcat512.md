@@ -44,6 +44,14 @@ mkdir -p /path/to/deeplearning-course-stylegan/data/raw/afhq
 cp -r data/afhq/train /path/to/deeplearning-course-stylegan/data/raw/afhq/
 ```
 
+若目标机器无法连接 Dropbox，可使用 Hugging Face 的 AFHQv2 镜像下载 `train/cat`。该脚本会
+逐张保存图片，网络中断后重复执行即可跳过已保存图片：
+
+```bash
+python -m pip install -U datasets pillow tqdm
+python scripts/download_afhqcat_hf.py --hf-endpoint https://hf-mirror.com
+```
+
 回到本项目根目录，转换为 StyleGAN2-ADA ZIP：
 
 ```bash
