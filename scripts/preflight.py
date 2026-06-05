@@ -18,12 +18,38 @@ sys.path.insert(0, str(ROOT / "src"))
 from stylegan_course.project import load_config, require_backend  # noqa: E402
 
 
-REQUIRED_PACKAGES = ["click", "numpy", "PIL", "requests", "scipy", "torch", "tqdm"]
+BUILD_PACKAGE_FIX = (
+    'python -m pip install -U "setuptools>=70" "wheel>=0.43" '
+    "-i https://pypi.tuna.tsinghua.edu.cn/simple"
+)
+REQUIRED_PACKAGES = [
+    "click",
+    "numpy",
+    "PIL",
+    "requests",
+    "scipy",
+    "setuptools",
+    "torch",
+    "tqdm",
+    "wheel",
+]
 RECOMMENDED_PACKAGES = ["ninja", "pyspng", "imageio_ffmpeg", "lmdb", "cv2"]
 
 
 def package_status(names: List[str]) -> List[str]:
     return [name for name in names if importlib.util.find_spec(name) is None]
+
+
+def check_python_build_packages() -> None:
+    try:
+        import setuptools  # noqa: F401
+        import pkg_resources  # noqa: F401
+    except Exception as exc:
+        raise SystemExit(
+            "Python build packages are incompatible with this Python runtime. "
+            "PyTorch CUDA extension compilation imports setuptools before training. "
+            "Run: {}".format(BUILD_PACKAGE_FIX)
+        ) from exc
 
 
 def check_grid_sample_gradfix(backend: Path, torch: object) -> None:
@@ -81,6 +107,8 @@ def main() -> None:
     recommended_missing = package_status(RECOMMENDED_PACKAGES)
     if recommended_missing:
         print("[warn] optional performance packages missing: {}".format(", ".join(recommended_missing)))
+
+    check_python_build_packages()
 
     import torch
 

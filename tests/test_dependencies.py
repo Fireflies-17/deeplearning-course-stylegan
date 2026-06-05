@@ -14,6 +14,12 @@ import preflight
 class DependencyTests(unittest.TestCase):
     def test_official_backend_import_dependencies_are_required(self) -> None:
         self.assertIn("scipy", preflight.REQUIRED_PACKAGES)
+        self.assertIn("setuptools", preflight.REQUIRED_PACKAGES)
+        self.assertIn("wheel", preflight.REQUIRED_PACKAGES)
+
+    def test_python_build_package_fix_mentions_setuptools_and_wheel(self) -> None:
+        self.assertIn("setuptools", preflight.BUILD_PACKAGE_FIX)
+        self.assertIn("wheel", preflight.BUILD_PACKAGE_FIX)
 
 
 if __name__ == "__main__":

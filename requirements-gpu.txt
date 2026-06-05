@@ -11,4 +11,6 @@ pyspng==0.1.4
 requests==2.32.5
 rich>=13.8.0,<14
 scipy==1.14.1
+setuptools>=70
 tqdm==4.67.1
+wheel>=0.43
