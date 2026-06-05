@@ -14,8 +14,8 @@
     "aug": "ada",
     "augpipe": "bgc",
     "target": 0.6,
-    "kimg": 5000,
-    "snap": 50,
+    "kimg": 2000,
+    "snap": 25,
     "metrics": "fid50k_full",
     "workers": 8,
     "seed": 42

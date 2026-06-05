@@ -21,7 +21,8 @@
 - [x] 建立 `data/lsun_church256.md` 数据下载、校验、转换和验收记录；
 - [x] 新增 P1 LSUN Church 256 短跑与基线训练配置；
 - [ ] 在目标机下载并转换 LSUN Church Outdoor 数据；
-- [ ] 运行 P1 100 kimg 短跑并估算 5000 kimg 基线时间。
+- [x] 完成 P1 100 kimg 短跑并估算基线时间；
+- [ ] 运行 P1 2000 kimg 基线训练。
 
 ## P0：流程验证
 

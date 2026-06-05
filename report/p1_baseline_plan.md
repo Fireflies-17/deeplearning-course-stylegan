@@ -7,7 +7,7 @@
 - 正式数据集：LSUN Church Outdoor，256x256，100,000 张训练图像子集；
 - 许可证口径：使用 LSUN 项目页、LSUN 论文和 OpenDataLab 页面说明数据来源，仅用于课程研究；
 - 基线后端：固定提交的 NVIDIA StyleGAN2-ADA PyTorch；
-- 基线目标：先完成 100 kimg 短跑，确认数据、速度、快照、生成与指标链路，再启动 5000 kimg 基线候选；
+- 基线目标：先完成 100 kimg 短跑，确认数据、速度、快照、生成与指标链路，再启动 2000 kimg 基线候选；
 - 网络策略：大陆目标机优先使用 OpenDataLab 获取 LSUN，无法使用 CLI 时采用浏览器下载后手动传输；不依赖 Dropbox/Hugging Face 单一路径。
 
 选择 LSUN Church Outdoor 的原因：它比 CIFAR-10 更有视觉冲击力，比 FFHQ/CelebA 更少人脸隐私风险，
@@ -19,7 +19,7 @@
 | 配置 | 作用 | 训练预算 | 训练指标 |
 |---|---|---:|---|
 | `configs/baseline/p1_lsun_church256_short.json` | P1 短跑和耗时估算 | 100 kimg | none |
-| `configs/baseline/p1_lsun_church256_baseline.json` | P1 正式基线候选 | 5000 kimg | fid50k_full |
+| `configs/baseline/p1_lsun_church256_baseline.json` | P1 正式基线候选 | 2000 kimg | fid50k_full |
 
 两份配置共同固定：
 
@@ -124,13 +124,14 @@ python scripts/run_experiment.py train \
 - 100 kimg 样本图是否出现建筑轮廓、天空/地面分离、整体透视等粗粒度结构；
 - 单次 `fid50k_full` 能否成功落盘。
 
-若 5000 kimg 预计无法在 2026-06-11 前完成，则把完整基线预算降到 2000 kimg，并在本文件中
-记录原因。预算调整必须先于 P2 对比实验，避免事后根据结果选择预算。
+100 kimg 短跑实际耗时约 40 分钟，稳定速度约 23.3 sec/kimg。按该速度估算，5000 kimg
+约需 32 小时以上；为给 P2 对比实验和报告整理留出时间，P1 基线预算固定为 2000 kimg。
+预算调整发生在 P2 对比实验之前，避免事后根据结果选择预算。
 
 ## P1 完成标志
 
 - [ ] `data/lsun_church256.md` 中补齐下载日期、大小和校验信息；
-- [ ] 100 kimg 短跑完成，并记录训练速度；
+- [x] 100 kimg 短跑完成，并记录训练速度；
 - [ ] 至少一次基线训练完成；
 - [ ] 生成 64 张固定 seed 样本；
 - [ ] 产出 FID，最好补充 KID 与 Precision/Recall；
