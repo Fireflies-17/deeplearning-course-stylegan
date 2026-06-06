@@ -133,9 +133,9 @@ python scripts/run_experiment.py train \
 
 ## P1 完成标志
 
-- [ ] `data/lsun_church256.md` 中补齐下载日期、大小和校验信息；
-- [x] 100 kimg 短跑完成，并记录训练速度；
-- [ ] 至少一次基线训练完成；
-- [ ] 生成 64 张固定 seed 样本；
-- [ ] 产出 FID，最好补充 KID 与 Precision/Recall；
+- [ ] `data/lsun_church256.md` 中补齐下载日期、大小和校验信息；（仍为占位，需在目标机回填）
+- [x] 100 kimg 短跑完成，并记录训练速度（约 23.3 sec/kimg 单卡）；
+- [x] 至少一次基线训练完成（双卡 2000 kimg，FID50k_full≈13，曲线单调下降）；
+- [ ] 生成 64 张固定 seed 样本；（在 P2 评估阶段统一生成）
+- [x] 产出 FID（训练期 fid50k_full 曲线已落盘）；KID 与 Precision/Recall 待离线补算；
 - [ ] 汇总建筑结构、纹理重复、天空/边界伪影等失败模式，为 P2 诊断提供依据。

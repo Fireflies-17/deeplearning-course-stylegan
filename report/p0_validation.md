@@ -54,20 +54,22 @@ P0 轻量指标仅用于流程验收，不是 FID/KID，禁止写入最终报告
 当前生成图仍以模糊彩色斑点为主。P0 总训练量仅为 2 kimg，其目标是验证工程链路，
 因此不能据此判断正式模型质量。
 
-目标机训练日志与产物已同步，但当前 `results/logs/environment.json` 仍记录本地
-Windows、RTX 4060 Laptop、PyTorch 2.11 环境。正式归档前需要使用目标机生成的同名文件替换。
+目标机训练日志与产物已同步，`results/logs/environment.json` 也已替换为目标机记录
+（Linux、CUDA 12.8）。
 
 ## 兼容性修复
 
-固定版本官方代码针对 PyTorch 1.7-1.9。项目 bootstrap 会依次应用
-`patches/stylegan2-ada-pytorch-modern-pytorch.patch` 和
-`patches/stylegan2-ada-pytorch-modern-warnings.patch`：
+固定版本官方代码针对 PyTorch 1.7-1.9。项目 bootstrap 会依次应用 `patches/` 下的五个补丁
+（`modern-pytorch`、`modern-warnings`、`python312-distutils`、`ddp-noise-buffer`、`numpy-scalar`）：
 
 1. 适配 PyTorch 2.x 的 `InfiniteSampler` 基类初始化方式；
 2. 恢复 ADA/R1 所需的 `grid_sample` 二阶梯度路径；
 3. 适配现代 `grid_sampler_2d_backward` 算子签名；
 4. PyTorch 1.11+ 使用原生 `conv2d` 回退路径，不再重复输出不支持警告；
-5. 移除 Pillow 可自动推断的 `Image.fromarray(..., mode)` 参数。
+5. 移除 Pillow 可自动推断的 `Image.fromarray(..., mode)` 参数；
+6. 适配 Python 3.12（distutils 移除）与多卡 DDP 下的 noise buffer；
+7. 将 `FullyConnectedLayer` 的 `torch.full(..., np.float32(bias_init))` 改为 `float(...)`，
+   避免现代 torch 拒收 numpy 标量。
 
 目标机日志中每段训练曾重复输出 5896 次 `conv2d_gradfix not supported`。该信息是原版代码在
 PyTorch 2.8 上选择原生 `torch.nn.functional.conv2d` 的警告，不是训练错误，也未影响本次 P0。
@@ -87,3 +89,8 @@ python scripts/run_p0.py --config configs/baseline/p0_smoke.json
 环境记录包含依赖清单、主仓库状态、后端提交、后端补丁状态、GPU 和 CUDA 工具链信息。
 
 注意：即使训练配置使用 `metrics=none`，官方训练入口在导入指标模块时仍依赖 `scipy`。
+
+注意：`torch==2.8.0+cu128` 按 NumPy 2.x 编译，运行环境必须 `numpy>=2.0,<2.3`。装成 NumPy 1.x
+会出现 `torch.from_numpy(): expected np.ndarray (got numpy.ndarray)` 等 ABI 报错（曾导致 P2
+训练崩溃）。换机器后务必重新 `pip install -r requirements-gpu.txt` 并用训练所用的解释器验证：
+`python -c "import numpy,torch;print(numpy.__version__);torch.from_numpy(numpy.zeros(3))"`。

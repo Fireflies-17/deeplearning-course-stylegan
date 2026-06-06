@@ -23,7 +23,9 @@
 - [x] 在目标机下载并转换 LSUN Church Outdoor 数据；
 - [x] 完成 P1 100 kimg 短跑并估算基线时间；
 - [x] 运行 P1 2000 kimg 双卡基线训练（最终 FID50k_full ≈ 13.0）；
-- [x] 将 E2-E5 对照配置统一对齐到 1500 kimg 公平预算、评估 `mirror=false`。
+- [x] 将 E2-E5 对照配置统一对齐到 1500 kimg 公平预算、评估 `mirror=false`；
+- [ ] **回填数据溯源**：`data/lsun_church256.md` 补下载日期/来源、原始包大小、zip 的大小与 md5（目标机 `ls -l` + `md5sum`，报告复现性需要）；
+- [ ] 运行 E2-E5 训练并离线补算学习曲线与完整指标。
 
 ## P0：流程验证
 

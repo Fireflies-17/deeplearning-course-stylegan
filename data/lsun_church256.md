@@ -115,9 +115,11 @@ python scripts/run_experiment.py train \
 
 ## 待补充验收
 
-- [ ] 记录下载日期和来源；
-- [ ] 记录原始 LMDB 或图片目录大小；
-- [ ] 记录 `data/processed/lsun-church-256-100k.zip` 文件大小和校验值；
-- [ ] 确认转换日志显示图像数量为 100,000、分辨率为 256x256；
-- [ ] 运行 `configs/baseline/p1_lsun_church256_short.json` 完成 100 kimg 短跑；
+- [ ] 记录下载日期和来源；（**仍缺，需在目标机回填，报告复现性需要**）
+- [ ] 记录原始 LMDB 或图片目录大小；（**仍缺**）
+- [ ] 记录 `data/processed/lsun-church-256-100k.zip` 文件大小和校验值；（**仍缺**，
+  目标机执行 `ls -l` 与 `md5sum data/processed/lsun-church-256-100k.zip` 回填）
+- [x] 确认转换日志显示图像数量为 100,000、分辨率为 256x256（基线 `log.txt` 已记录
+  `Number of images: 100000` / `Image resolution: 256`）；
+- [x] 运行 `configs/baseline/p1_lsun_church256_short.json` 完成 100 kimg 短跑；
 - [x] 根据短跑日志中的 sec/kimg 估算基线训练时间，并固定双卡 2000 kimg 预算。
