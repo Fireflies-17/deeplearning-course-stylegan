@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "name": "p2-lsun-church256-50k-ada-1000",
-  "description": "Data-scale control using 50k images with ADA to compare against the 100k baseline.",
+  "name": "p2-lsun-church256-50k-ada-1500",
+  "description": "Data-scale control using a 50k subset with ADA to compare against the 100k baseline. Evaluated against the full 100k distribution for comparability.",
   "backend": "third_party/stylegan2-ada-pytorch",
   "data": "data/processed/lsun-church-256-100k.zip",
-  "outdir": "results/runs/p2-lsun-church256-50k-ada-1000",
-  "samples_outdir": "results/samples/p2-lsun-church256-50k-ada-1000",
+  "outdir": "results/runs/p2-lsun-church256-50k-ada-1500",
+  "samples_outdir": "results/samples/p2-lsun-church256-50k-ada-1500",
   "train": {
     "gpus": 2,
     "cfg": "paper256",
@@ -15,7 +15,7 @@
     "aug": "ada",
     "augpipe": "bgc",
     "target": 0.6,
-    "kimg": 1000,
+    "kimg": 1500,
     "snap": 25,
     "metrics": "none",
     "workers": 8,
@@ -27,6 +27,7 @@
   },
   "evaluate": {
     "metrics": "fid50k_full,kid50k_full,pr50k3_full",
+    "mirror": false,
     "gpus": 2
   }
 }

@@ -26,6 +26,7 @@
   },
   "evaluate": {
     "metrics": "fid50k_full,kid50k_full,pr50k3_full",
+    "mirror": false,
     "gpus": 2
   }
 }

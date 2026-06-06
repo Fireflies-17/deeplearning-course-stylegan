@@ -29,6 +29,10 @@ __pycache__/
 !/results/tables/.gitkeep
 /results/figures/*
 !/results/figures/.gitkeep
+/results/analysis/*
+!/results/analysis/.gitkeep
+/results/nn/*
+!/results/nn/.gitkeep
 
 # Course materials currently kept outside version control.
 /报告模板.doc

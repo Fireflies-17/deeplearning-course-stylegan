@@ -60,6 +60,31 @@ class CommandTests(unittest.TestCase):
         joined = " ".join(command)
         self.assertIn("--metrics=fid50k_full,kid50k_full,pr50k3_full", joined)
         self.assertIn("lsun-church-256-100k.zip", joined)
+        # Offline evaluation must disable mirroring so the FID reference set matches
+        # the unmirrored full distribution, regardless of the mirror used in training.
+        self.assertIn("--mirror=false", joined)
+
+    def test_p2_configs_use_fixed_budget_and_unmirrored_evaluation(self) -> None:
+        p2_configs = [
+            "configs/baseline/p2_lsun_church256_noada_1500.json",
+            "configs/baseline/p2_lsun_church256_fixedp02_1500.json",
+            "configs/baseline/p2_lsun_church256_subset50k_ada_1500.json",
+            "configs/baseline/p2_lsun_church256_target04_1500.json",
+            "configs/baseline/p2_lsun_church256_target08_1500.json",
+        ]
+        for path in p2_configs:
+            config = load_config(path)
+            train = " ".join(build_train_command(config))
+            evaluate = " ".join(
+                build_evaluate_command(config, Path("network-snapshot-001500.pkl"))
+            )
+            with self.subTest(config=path):
+                # 1500 kimg is the fair comparison budget shared by every P2 group.
+                self.assertIn("--kimg=1500", train)
+                # Training metrics stay off to save budget; FID is computed offline.
+                self.assertIn("--metrics=none", train)
+                # Every group evaluates against the unmirrored full distribution.
+                self.assertIn("--mirror=false", evaluate)
 
     def test_p1_generate_command_is_unconditional(self) -> None:
         config = load_config("configs/baseline/p1_lsun_church256_short.json")

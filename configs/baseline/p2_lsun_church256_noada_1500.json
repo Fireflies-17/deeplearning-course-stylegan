@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
-  "name": "p2-lsun-church256-100k-noada-1000",
-  "description": "No-augmentation control for estimating the effect of ADA under the same LSUN Church 256x256 100k setting.",
+  "name": "p2-lsun-church256-100k-noada-1500",
+  "description": "No-augmentation control for estimating the effect of ADA under the same LSUN Church 256x256 100k setting. mirror:true keeps dataset x-flip on; only the ADA pipeline is disabled.",
   "backend": "third_party/stylegan2-ada-pytorch",
   "data": "data/processed/lsun-church-256-100k.zip",
-  "outdir": "results/runs/p2-lsun-church256-100k-noada-1000",
-  "samples_outdir": "results/samples/p2-lsun-church256-100k-noada-1000",
+  "outdir": "results/runs/p2-lsun-church256-100k-noada-1500",
+  "samples_outdir": "results/samples/p2-lsun-church256-100k-noada-1500",
   "train": {
     "gpus": 2,
     "cfg": "paper256",
     "cond": false,
     "mirror": true,
     "aug": "noaug",
-    "kimg": 1000,
+    "kimg": 1500,
     "snap": 25,
     "metrics": "none",
     "workers": 8,
@@ -24,6 +24,7 @@
   },
   "evaluate": {
     "metrics": "fid50k_full,kid50k_full,pr50k3_full",
+    "mirror": false,
     "gpus": 2
   }
 }
