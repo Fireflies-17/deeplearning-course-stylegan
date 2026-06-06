@@ -5,7 +5,9 @@ channels:
 dependencies:
   - python=3.12
   - pip>=24.3
-  - numpy=1.26.4
+  # torch 2.8.0+cu128 wheels are built against NumPy 2.x; NumPy 1.x breaks
+  # torch.from_numpy. Upper bound <2.3 keeps scipy 1.14.1 happy.
+  - numpy>=2.0,<2.3
   - pillow=11.3.0
   - scipy=1.14.1
   - pip:

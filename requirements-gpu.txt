@@ -4,7 +4,10 @@ click>=8.4.0,<9
 imageio-ffmpeg==0.6.0
 lmdb==1.6.2
 ninja==1.11.1.4
-numpy==1.26.4
+# torch 2.8.0+cu128 wheels are built against NumPy 2.x; NumPy 1.x breaks
+# torch.from_numpy with "expected np.ndarray (got numpy.ndarray)". Upper bound
+# stays <2.3 for scipy 1.14.1 compatibility.
+numpy>=2.0,<2.3
 opencv-python-headless==4.11.0.86
 pillow==11.3.0
 pyspng==0.1.4
