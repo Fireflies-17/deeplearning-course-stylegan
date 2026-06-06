@@ -60,17 +60,6 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
-run_one() {
-  # run_one LABEL CONFIG "GPUS"
-  local label="$1" config="$2" gpus="$3"
-  local log="${LOG_DIR}/${label}.log"
-  echo "[launch] $label on GPUs $gpus -> $log"
-  CUDA_VISIBLE_DEVICES="$gpus" \
-    python scripts/run_experiment.py train --config "$config" \
-    >"$log" 2>&1 &
-  echo $!  # return the PID
-}
-
 echo "== P2 plan C: ${#RUNS[@]} runs, $SLOTS parallel slots, pairs: ${PAIRS[*]} =="
 wave=1
 i=0
@@ -78,10 +67,17 @@ while (( i < ${#RUNS[@]} )); do
   echo "== Wave $wave =="
   pids=()
   labels=()
+  # Launch each job with '&' directly in this loop (NOT via a function called
+  # through $(...)), so the background process is a real child of this shell and
+  # 'wait "$pid"' below can reap it.
   for (( slot=0; slot < SLOTS && i < ${#RUNS[@]}; slot++, i++ )); do
     read -r label config <<< "${RUNS[$i]}"
-    pid=$(run_one "$label" "$config" "${PAIRS[$slot]}")
-    pids+=("$pid")
+    log="${LOG_DIR}/${label}.log"
+    echo "[launch] $label on GPUs ${PAIRS[$slot]} -> $log"
+    CUDA_VISIBLE_DEVICES="${PAIRS[$slot]}" \
+      python scripts/run_experiment.py train --config "$config" \
+      >"$log" 2>&1 &
+    pids+=("$!")
     labels+=("$label")
   done
 
