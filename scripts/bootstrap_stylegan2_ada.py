@@ -24,6 +24,7 @@ PATCHES = [
     ROOT / "patches" / "stylegan2-ada-pytorch-modern-warnings.patch",
     ROOT / "patches" / "stylegan2-ada-pytorch-python312-distutils.patch",
     ROOT / "patches" / "stylegan2-ada-pytorch-ddp-noise-buffer.patch",
+    ROOT / "patches" / "stylegan2-ada-pytorch-numpy-scalar.patch",
 ]
 
 
