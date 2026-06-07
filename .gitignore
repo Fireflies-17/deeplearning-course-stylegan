@@ -15,6 +15,7 @@ __pycache__/
 .vscode/
 
 # Large and generated experiment artifacts.
+/*.tar.gz
 /data/raw/
 /data/downloads/
 /data/processed/

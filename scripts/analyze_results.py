@@ -175,6 +175,72 @@ def write_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+FAIR_METRICS = [
+    "fid50k_full",
+    "kid50k_full",
+    "pr50k3_full_precision",
+    "pr50k3_full_recall",
+]
+
+
+def fair_comparison(
+    curves: Dict[str, List[Dict[str, Any]]], target_kimg: int
+) -> List[Dict[str, Any]]:
+    """One row per run: the metric snapshot whose kimg is closest to ``target_kimg``.
+
+    Runs use slightly different snapshot grids (e.g. E1 lands on 1512 while the
+    1500-budget runs land on 1500), so an exact kimg match is not guaranteed; the
+    nearest snapshot that actually carries an FID value is used instead. This
+    aligns the matrix at a common training budget rather than mixing each run's
+    own final kimg.
+    """
+    rows: List[Dict[str, Any]] = []
+    for name, curve in curves.items():
+        points = [r for r in curve if r.get("fid50k_full") is not None]
+        if not points:
+            continue
+        chosen = min(points, key=lambda r: abs(r["kimg"] - target_kimg))
+        row: Dict[str, Any] = {
+            "run": name,
+            "target_kimg": target_kimg,
+            "snapshot_kimg": chosen["kimg"],
+        }
+        for metric in FAIR_METRICS:
+            row[metric] = chosen.get(metric)
+        rows.append(row)
+    return rows
+
+
+def make_fair_plot(rows: List[Dict[str, Any]], outdir: Path) -> None:
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception as exc:  # pragma: no cover - optional dependency
+        print("[fair plot skipped] matplotlib unavailable: {}".format(exc))
+        return
+
+    bars = [(r["run"], r["fid50k_full"]) for r in rows if r.get("fid50k_full") is not None]
+    if not bars:
+        return
+    names, vals = zip(*bars)
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    positions = range(len(names))
+    ax.bar(positions, vals, color="#4C72B0")
+    for x, v in zip(positions, vals):
+        ax.text(x, v, "{:.2f}".format(v), ha="center", va="bottom", fontsize=9)
+    ax.set_xticks(list(positions))
+    ax.set_xticklabels(names)
+    ax.set_ylabel("FID50k_full")
+    ax.set_title("FID at matched budget (~{} kimg)".format(rows[0]["target_kimg"]))
+    ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(outdir / "fair_fid_comparison.png", dpi=150)
+    plt.close(fig)
+    print("[plot] {}".format(outdir / "fair_fid_comparison.png"))
+
+
 def make_plots(curves: Dict[str, List[Dict[str, Any]]], outdir: Path) -> None:
     try:
         import matplotlib
@@ -241,6 +307,12 @@ def main() -> None:
     )
     parser.add_argument("--outdir", default="results/analysis")
     parser.add_argument("--no-plots", action="store_true")
+    parser.add_argument(
+        "--fair-kimg",
+        type=int,
+        default=None,
+        help="Emit fair_comparison.csv aligning every run at the snapshot closest to this kimg.",
+    )
     args = parser.parse_args()
 
     outdir = resolve_path(args.outdir)
@@ -269,6 +341,21 @@ def main() -> None:
     write_csv(outdir / "summary.csv", summaries)
     print("[csv] {}".format(outdir / "learning_curves.csv"))
     print("[csv] {}".format(outdir / "summary.csv"))
+
+    if args.fair_kimg is not None:
+        fair_rows = fair_comparison(curves, args.fair_kimg)
+        write_csv(outdir / "fair_comparison.csv", fair_rows)
+        print("[csv] {}".format(outdir / "fair_comparison.csv"))
+        for row in fair_rows:
+            print(
+                "  [fair] {} @ {} kimg: FID={}".format(
+                    row["run"],
+                    row["snapshot_kimg"],
+                    round(row["fid50k_full"], 3) if row.get("fid50k_full") else None,
+                )
+            )
+        if not args.no_plots:
+            make_fair_plot(fair_rows, outdir)
 
     if not args.no_plots:
         make_plots(curves, outdir)
