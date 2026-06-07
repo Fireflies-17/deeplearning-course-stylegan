@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "p2-lsun-church256-50k-ada-seed1-1500",
+  "description": "Second-seed repeat of the E4 data-scale control (50k subset, ADA target=0.6) at 1500 kimg, for estimating seed variance on the data-scale axis. Identical to E4 except seed=1.",
+  "backend": "third_party/stylegan2-ada-pytorch",
+  "data": "data/processed/lsun-church-256-100k.zip",
+  "outdir": "results/runs/p2-lsun-church256-50k-ada-seed1-1500",
+  "samples_outdir": "results/samples/p2-lsun-church256-50k-ada-seed1-1500",
+  "train": {
+    "gpus": 2,
+    "cfg": "paper256",
+    "cond": false,
+    "subset": 50000,
+    "mirror": true,
+    "aug": "ada",
+    "augpipe": "bgc",
+    "target": 0.6,
+    "kimg": 1500,
+    "snap": 25,
+    "metrics": "none",
+    "workers": 8,
+    "seed": 1
+  },
+  "generate": {
+    "seeds": "0-63",
+    "trunc": 1.0
+  },
+  "evaluate": {
+    "metrics": "fid50k_full,kid50k_full,pr50k3_full",
+    "mirror": false,
+    "gpus": 2
+  }
+}

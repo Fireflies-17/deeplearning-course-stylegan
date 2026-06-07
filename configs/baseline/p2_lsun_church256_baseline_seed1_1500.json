@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "name": "p2-lsun-church256-100k-ada-seed1-1500",
+  "description": "Second-seed repeat of the E1 central baseline (100k, ADA target=0.6) at the 1500 kimg fair-comparison budget, for estimating seed variance. Identical to the E1 condition except seed=1 and kimg capped at 1500 with offline evaluation.",
+  "backend": "third_party/stylegan2-ada-pytorch",
+  "data": "data/processed/lsun-church-256-100k.zip",
+  "outdir": "results/runs/p2-lsun-church256-100k-ada-seed1-1500",
+  "samples_outdir": "results/samples/p2-lsun-church256-100k-ada-seed1-1500",
+  "train": {
+    "gpus": 2,
+    "cfg": "paper256",
+    "cond": false,
+    "mirror": true,
+    "aug": "ada",
+    "augpipe": "bgc",
+    "target": 0.6,
+    "kimg": 1500,
+    "snap": 25,
+    "metrics": "none",
+    "workers": 8,
+    "seed": 1
+  },
+  "generate": {
+    "seeds": "0-63",
+    "trunc": 1.0
+  },
+  "evaluate": {
+    "metrics": "fid50k_full,kid50k_full,pr50k3_full",
+    "mirror": false,
+    "gpus": 2
+  }
+}
