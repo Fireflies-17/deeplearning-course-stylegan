@@ -39,10 +39,12 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from stylegan_course.project import resolve_path  # noqa: E402
 
-# Same detector the backend uses for FID, so neighbor distances live in the FID space.
+# Same detector the backend uses for FID, so neighbor distances live in the FID
+# space. The URL must match the backend's string exactly (note: ``.pt``, not
+# ``.pkl``) so open_url reuses the cached download instead of re-fetching.
 DETECTOR_URL = (
     "https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/"
-    "metrics/inception-2015-12-05.pkl"
+    "metrics/inception-2015-12-05.pt"
 )
 
 
