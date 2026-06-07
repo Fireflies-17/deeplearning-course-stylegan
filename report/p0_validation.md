@@ -94,3 +94,11 @@ python scripts/run_p0.py --config configs/baseline/p0_smoke.json
 会出现 `torch.from_numpy(): expected np.ndarray (got numpy.ndarray)` 等 ABI 报错（曾导致 P2
 训练崩溃）。换机器后务必重新 `pip install -r requirements-gpu.txt` 并用训练所用的解释器验证：
 `python -c "import numpy,torch;print(numpy.__version__);torch.from_numpy(numpy.zeros(3))"`。
+
+注意：评估指标依赖从 NVIDIA CDN 下载特征网络——`inception-2015-12-05.pkl`（FID/KID/最近邻）和
+`vgg16.pt`（pr50k3 的 Precision/Recall）。该 CDN 在国内极慢甚至超时。可先开学术加速再评估，或手动下载后
+按 `<url-md5>_<文件名>` 命名放入 `~/.cache/dnnlib/downloads/`。下载一次即缓存，后续各组评估不再联网。
+
+注意：离线评估用单卡运行（`calc_metrics.py --gpus 1`）。双卡评估在 `pr50k3_full` 收尾会触发
+PyTorch 2.8 的 NCCL/TCPStore 拆进程组报错，导致 Precision/Recall 不落盘；指标与卡数无关，单卡稳定，
+多卡机可一卡一组并行。

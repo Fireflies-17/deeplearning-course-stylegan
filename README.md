@@ -2,9 +2,9 @@
 
 更新时间：2026-06-06
 
-当前阶段：**P1 基线已完成，进入 P2 因素矩阵实验准备**
+当前阶段：**P2 因素矩阵 E2-E5 训练完成，离线评估进行中**
 
-当前阻塞项：E2-E5 对照配置已统一对齐到 1500 kimg、评估口径 `mirror=false`，待在目标 RTX PRO 6000 机器上启动训练并离线补算学习曲线指标。
+当前阻塞项：E1 已补齐 FID/KID/PR（@1512 kimg：FID≈16.6、precision≈0.59、recall≈0.06）；E2-E5 已训练到 1500 kimg，正用**单卡** `calc_metrics` 离线补算 FID/KID/PR 与学习曲线（双卡评估在 `pr50k3` 收尾会触发 NCCL/TCPStore 报错，故改单卡）。
 
 ## 近期任务
 
@@ -25,7 +25,10 @@
 - [x] 运行 P1 2000 kimg 双卡基线训练（最终 FID50k_full ≈ 13.0）；
 - [x] 将 E2-E5 对照配置统一对齐到 1500 kimg 公平预算、评估 `mirror=false`；
 - [ ] **回填数据溯源**：`data/lsun_church256.md` 补下载日期/来源、原始包大小、zip 的大小与 md5（目标机 `ls -l` + `md5sum`，报告复现性需要）；
-- [ ] 运行 E2-E5 训练并离线补算学习曲线与完整指标。
+- [x] 运行 E2-E5 训练到 1500 kimg；
+- [x] E1 单卡补算 FID/KID/PR（@1512 kimg）；
+- [ ] E2-E5 单卡补算 FID/KID/PR，并用 `scripts/analyze_results.py` 汇总学习曲线与总表；
+- [ ] 生成报告用图：截断展示/扫描、风格混合、`scripts/interpolate.py` 插值、`scripts/nearest_neighbors.py` 最近邻。
 
 ## P0：流程验证
 

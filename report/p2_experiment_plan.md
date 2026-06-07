@@ -99,6 +99,15 @@ python scripts/run_experiment.py evaluate \
   ADA/损失/资源记录，输出 CSV 与曲线图。
 - `scripts/nearest_neighbors.py`：接受网络、数据、种子范围、Top-K，用官方 Inception 特征做流式最近邻
   检索，输出每个生成样本及其 Top-K 真实近邻表格与拼图。
+- `scripts/interpolate.py`：对指定锚点种子做 W 空间（默认）或 Z 空间插值，支持截断，输出逐帧 PNG、
+  拼图 `contact_sheet.png` 及可选 mp4，用于展示隐空间连续性。
+
+离线评估实测注意：双卡 `calc_metrics`（即 `run_experiment.py evaluate` 默认 `gpus=2`）在 `pr50k3_full`
+收尾时会触发 PyTorch 2.8 的 NCCL/TCPStore 拆进程组报错导致该指标不落盘。补算指标改为**单卡**直接调
+`third_party/stylegan2-ada-pytorch/calc_metrics.py --gpus 1 --mirror 0`，结果与卡数无关；4 张卡可一卡一组
+并行，整体更快也不再崩。E1 同预算锚点取最接近 1500 的 `network-snapshot-001512.pkl`（+12 kimg）。
+评估所需的 `inception-2015-12-05.pkl` / `vgg16.pt` 从 NVIDIA CDN 下载在国内很慢，需提前用学术加速或手动
+放入 `~/.cache/dnnlib/downloads/`（命名 `<url-md5>_<文件名>`）。
 
 ## 生成阶段分析
 
@@ -119,15 +128,18 @@ done
 
 | 实验 | 数据规模 | 增强模式 | target/p | kimg | FID | KID | Precision | Recall | 主要现象 |
 |---|---:|---|---|---:|---:|---:|---:|---:|---|
-| E1-center | 100k | ADA | target=0.6 | 1512 | | | | | |
-| E1-final | 100k | ADA | target=0.6 | 2000 | | | | | |
-| E2 | 100k | noaug | - | 1500 | | | | | |
-| E3 | 100k | fixed | p=0.2 | 1500 | | | | | |
-| E4 | 50k | ADA | target=0.6 | 1500 | | | | | |
-| E5 | 100k | ADA | target=0.4 | 1500 | | | | | |
-| E6 | 100k | ADA | target=0.8 | 1500 | | | | | |
+| E1-center | 100k | ADA | target=0.6 | 1512 | 16.63 | 0.0111 | 0.589 | 0.060 | recall 最高，多样性最好 |
+| E1-final | 100k | ADA | target=0.6 | 2000 | | | | | 2000 kimg 展示模型，PR 待补 |
+| E2 | 100k | noaug | - | 1500 | 18.59 | 0.0113 | 0.557 | 0.028 | FID/KID 最差，无增强基准 |
+| E3 | 100k | fixed | p=0.2 | 1500 | 16.47 | 0.0091 | 0.624 | 0.026 | precision 最高、recall 最低，最锐但最不多样 |
+| E4 | 50k | ADA | target=0.6 | 1500 | 15.82 | 0.0082 | 0.547 | 0.037 | 数据减半，FID 尚好但 recall 低（多样性代价） |
+| E5 | 100k | ADA | target=0.4 | 1500 | 15.48 | 0.0075 | 0.604 | 0.030 | FID/KID 最优，recall 偏低（强增强偏保真） |
+| E6 | 100k | ADA | target=0.8 | 1500 | | | | | 未运行 |
 
-指标不足时所有组至少计算 FID；KID、Precision、Recall 优先补给 E1-final、E2、E3、E4。
+核心结论：① 无增强（E2）FID/KID 全面最差，增强有用；② ADA（E1）recall 约为其余组 2 倍，自适应增强
+在保真与多样性间更平衡；③ 增强越强（E5 target=0.4、E4 50k 触发更强 ADA）FID 越好但 recall 越低，
+FID 不反映多样性损失，故必须同时报 recall。所有结果为单训练种子，细微排序仅作趋势，大 margin 结论
+（①②）可下定论。数值由 `scripts/analyze_results.py` 汇总（各 run 目录 `metric-*.jsonl`）。
 
 ## 数据质量与记忆风险
 
