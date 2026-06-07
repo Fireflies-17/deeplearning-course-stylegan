@@ -10,12 +10,24 @@ Reads each run's ``stats.jsonl`` (training-time scalars) and ``metric-*.jsonl``
   total training cost (hours, mean sec/kimg).
 - Optional PNG curves (FID vs kimg, ADA p vs kimg, G/D loss vs kimg) when
   matplotlib is available.
+- With ``--fair-kimg``: ``<outdir>/fair_comparison.csv`` (+ bar plot), one row per
+  run at the snapshot closest to that kimg, for a matched-budget ranking.
+- With ``--fair-kimg`` and ``--seed-group``: ``<outdir>/seed_aggregate.csv``
+  (+ ``seed_fid_comparison.png``), one row per configuration giving the
+  mean/min/max/range of each metric across its seeds.
 
 Usage::
 
     python scripts/analyze_results.py \
         --run E1=results/runs/p1-lsun-church256-100k-baseline \
         --run E2=results/runs/p2-lsun-church256-100k-noada-1500 \
+        --outdir results/analysis
+
+    # Cross-seed aggregation at a matched budget (E1+E1b are the same config,
+    # different seeds):
+    python scripts/analyze_results.py \
+        --run E1=<run> --run E1b=<run> --run E2=<run> --run E2b=<run> \
+        --fair-kimg 1500 --seed-group E1=E1,E1b --seed-group E2=E2,E2b \
         --outdir results/analysis
 
 The run path may point either at a training subfolder (the one that contains
@@ -241,6 +253,84 @@ def make_fair_plot(rows: List[Dict[str, Any]], outdir: Path) -> None:
     print("[plot] {}".format(outdir / "fair_fid_comparison.png"))
 
 
+def seed_aggregate(
+    fair_rows: List[Dict[str, Any]], groups: Dict[str, List[str]]
+) -> List[Dict[str, Any]]:
+    """One row per seed-group: mean / min / max / range of each metric across seeds.
+
+    ``groups`` maps a group label (e.g. ``E1``) to the run names that are the same
+    configuration under different seeds (e.g. ``["E1", "E1b"]``). The aggregate is
+    computed over the fair-budget snapshot of each member, so every seed is compared
+    at the same kimg. ``range`` is ``max - min`` and doubles as the error-bar half-
+    span only loosely (it is the full span for n=2). ``num_gpus``-style metadata is
+    not aggregated; only the FAIR_METRICS are.
+    """
+    by_name = {row["run"]: row for row in fair_rows}
+    rows: List[Dict[str, Any]] = []
+    for group, members in groups.items():
+        present = [by_name[m] for m in members if m in by_name]
+        if not present:
+            print("[seed-group skipped] {}: no members found in fair rows".format(group))
+            continue
+        row: Dict[str, Any] = {
+            "group": group,
+            "n_seeds": len(present),
+            "members": "+".join(m for m in members if m in by_name),
+            "snapshot_kimg": "/".join(str(r.get("snapshot_kimg")) for r in present),
+        }
+        for metric in FAIR_METRICS:
+            vals = [r[metric] for r in present if r.get(metric) is not None]
+            if not vals:
+                row[metric + "_mean"] = None
+                row[metric + "_min"] = None
+                row[metric + "_max"] = None
+                row[metric + "_range"] = None
+                continue
+            lo, hi = min(vals), max(vals)
+            row[metric + "_mean"] = sum(vals) / len(vals)
+            row[metric + "_min"] = lo
+            row[metric + "_max"] = hi
+            row[metric + "_range"] = hi - lo
+        rows.append(row)
+    return rows
+
+
+def make_seed_plot(agg_rows: List[Dict[str, Any]], outdir: Path) -> None:
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except Exception as exc:  # pragma: no cover - optional dependency
+        print("[seed plot skipped] matplotlib unavailable: {}".format(exc))
+        return
+
+    bars = [r for r in agg_rows if r.get("fid50k_full_mean") is not None]
+    if not bars:
+        return
+    names = [r["group"] for r in bars]
+    means = [r["fid50k_full_mean"] for r in bars]
+    # Asymmetric error bars from the observed min/max around the mean.
+    lower = [r["fid50k_full_mean"] - r["fid50k_full_min"] for r in bars]
+    upper = [r["fid50k_full_max"] - r["fid50k_full_mean"] for r in bars]
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    positions = range(len(names))
+    ax.bar(positions, means, color="#4C72B0", yerr=[lower, upper], capsize=6,
+           error_kw={"ecolor": "#333333", "elinewidth": 1.2})
+    for x, r in zip(positions, bars):
+        ax.text(x, r["fid50k_full_max"], "{:.2f}".format(r["fid50k_full_mean"]),
+                ha="center", va="bottom", fontsize=9)
+    ax.set_xticks(list(positions))
+    ax.set_xticklabels(["{}\n(n={})".format(r["group"], r["n_seeds"]) for r in bars])
+    ax.set_ylabel("FID50k_full (mean, bars = seed min/max)")
+    ax.set_title("FID across seeds at matched budget")
+    ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(outdir / "seed_fid_comparison.png", dpi=150)
+    plt.close(fig)
+    print("[plot] {}".format(outdir / "seed_fid_comparison.png"))
+
+
 def make_plots(curves: Dict[str, List[Dict[str, Any]]], outdir: Path) -> None:
     try:
         import matplotlib
@@ -283,6 +373,21 @@ def make_plots(curves: Dict[str, List[Dict[str, Any]]], outdir: Path) -> None:
         print("[plot] {}".format(outdir / filename))
 
 
+def parse_group_arg(value: str) -> Tuple[str, List[str]]:
+    if "=" not in value:
+        raise argparse.ArgumentTypeError(
+            "--seed-group expects GROUP=NAME1,NAME2, got: {}".format(value)
+        )
+    group, raw_members = value.split("=", 1)
+    group = group.strip()
+    members = [m.strip() for m in raw_members.split(",") if m.strip()]
+    if not group or not members:
+        raise argparse.ArgumentTypeError(
+            "--seed-group needs a label and >=1 run name in: {}".format(value)
+        )
+    return group, members
+
+
 def parse_run_arg(value: str) -> Tuple[str, Path]:
     if "=" not in value:
         raise argparse.ArgumentTypeError(
@@ -312,6 +417,15 @@ def main() -> None:
         type=int,
         default=None,
         help="Emit fair_comparison.csv aligning every run at the snapshot closest to this kimg.",
+    )
+    parser.add_argument(
+        "--seed-group",
+        action="append",
+        type=parse_group_arg,
+        default=None,
+        metavar="GROUP=NAME1,NAME2",
+        help="Aggregate the named runs as one configuration across seeds (repeatable). "
+        "Requires --fair-kimg; emits seed_aggregate.csv + seed_fid_comparison.png.",
     )
     args = parser.parse_args()
 
@@ -356,6 +470,27 @@ def main() -> None:
             )
         if not args.no_plots:
             make_fair_plot(fair_rows, outdir)
+
+        if args.seed_group:
+            groups = dict(args.seed_group)
+            agg_rows = seed_aggregate(fair_rows, groups)
+            write_csv(outdir / "seed_aggregate.csv", agg_rows)
+            print("[csv] {}".format(outdir / "seed_aggregate.csv"))
+            for row in agg_rows:
+                mean = row.get("fid50k_full_mean")
+                print(
+                    "  [seed] {} (n={}): FID mean={} range=[{}, {}]".format(
+                        row["group"],
+                        row["n_seeds"],
+                        round(mean, 3) if isinstance(mean, float) else mean,
+                        round(row["fid50k_full_min"], 3) if row.get("fid50k_full_min") else None,
+                        round(row["fid50k_full_max"], 3) if row.get("fid50k_full_max") else None,
+                    )
+                )
+            if not args.no_plots:
+                make_seed_plot(agg_rows, outdir)
+    elif args.seed_group:
+        print("[seed-group ignored] --seed-group requires --fair-kimg")
 
     if not args.no_plots:
         make_plots(curves, outdir)

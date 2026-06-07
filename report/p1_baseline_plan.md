@@ -37,58 +37,21 @@
 
 ## 目标机执行顺序
 
-先安装 LSUN LMDB 转换依赖：
+> 数据的下载策略（OpenDataLab 单类别包、`openxlab` 临时环境注意事项）、目录整理与
+> `dataset_tool.py` 转换命令统一记录在 **`data/lsun_church256.md`**，此处不再重复，只列 P1
+> 训练前后的步骤。
+
+环境与后端就绪、并按 `data/lsun_church256.md` 备好 `data/processed/lsun-church-256-100k.zip`：
 
 ```bash
 python -m pip install -r requirements-gpu.txt
-```
-
-不要下载 OpenDataLab 上的全量 LSUN 包；全量包约 TB 级，不适合本项目。P1 只需要
-`church_outdoor_train_lmdb.zip` 这个单类别训练包，公开镜像记录的文件大小约 2.45GB。
-
-优先直接下载并解压单类别包：
-
-```bash
-python scripts/download_lsun_church.py --extract
-```
-
-如果默认官方地址在中国大陆不可达，进入 OpenDataLab 的 LSUN 数据集页面，只选择
-Church Outdoor / `church_outdoor_train_lmdb.zip` 单文件下载，不要选择 full/all/complete
-全量下载包。OpenDataLab 的文件名和 CLI 数据集名可能调整，以页面显示的命令为准：
-
-```text
-https://opendatalab.org.cn/OpenDataLab/lsun
-```
-
-`openxlab` 可以用于下载这个单文件，但不要长期留在 StyleGAN 训练环境中。它会把 `requests`、
-`rich` 和 `tqdm` 约束到旧版本，和目标机已有工具以及本项目依赖冲突。需要 CLI 下载时，
-优先单独创建临时下载环境；训练环境只保留 `requirements-gpu.txt` 中的依赖。
-
-如果只能在训练环境中临时安装 `openxlab` 下载数据，下载完成后先修复环境：
-
-```bash
-python -m pip uninstall -y openxlab
-python -m pip install -U -r requirements-gpu.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-python -m pip check
-```
-
-将下载并解压后的 Church Outdoor 训练集整理为：
-
-```text
-data/raw/lsun/church_outdoor_train_lmdb
-```
-
-数据转换与短跑：
-
-```bash
 python scripts/bootstrap_stylegan2_ada.py
 python scripts/preflight.py --strict
-python scripts/prepare_data.py convert \
-  --source data/raw/lsun/church_outdoor_train_lmdb \
-  --dest data/processed/lsun-church-256-100k.zip \
-  --resolution 256x256 \
-  --transform center-crop \
-  --max-images 100000
+```
+
+短跑校验整条链路（数据 → 训练 → 生成 → 指标）：
+
+```bash
 python scripts/run_experiment.py train \
   --config configs/baseline/p1_lsun_church256_short.json \
   --dry-run
@@ -136,6 +99,6 @@ python scripts/run_experiment.py train \
 - [ ] `data/lsun_church256.md` 中补齐下载日期、大小和校验信息；（仍为占位，需在目标机回填）
 - [x] 100 kimg 短跑完成，并记录训练速度（约 23.3 sec/kimg 单卡）；
 - [x] 至少一次基线训练完成（双卡 2000 kimg，FID50k_full≈13，曲线单调下降）；
-- [ ] 生成 64 张固定 seed 样本；（在 P2 评估阶段统一生成）
-- [x] 产出 FID（训练期 fid50k_full 曲线已落盘）；KID 与 Precision/Recall 待离线补算；
-- [ ] 汇总建筑结构、纹理重复、天空/边界伪影等失败模式，为 P2 诊断提供依据。
+- [x] 生成固定 seed 样本（各组 `results/samples/p2-*`，另有插值/风格混合/截断/最近邻展示）；
+- [x] 产出 FID/KID/Precision/Recall（E1-E5 已离线补算，汇总于 `results/analysis/`）；
+- [ ] 汇总建筑结构、纹理重复、天空/边界伪影等失败模式，为报告分析提供依据（待人工挑图 + 撰写）。
