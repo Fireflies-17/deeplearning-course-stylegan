@@ -30,7 +30,7 @@
 - `target=0.6`；
 - `mirror=true`；
 - `seed=42`；
-- 短跑使用单卡，正式 2000 kimg 基线使用双卡训练与双卡评估。
+- 短跑使用单卡，正式 2000 kimg 基线使用双卡训练；离线评估统一使用单卡。
 
 `paper256` 是 StyleGAN2-ADA 后端用于 256x256 复现实验的官方基配置。`mirror=true` 用于扩增
 无标签场景数据，适合 Church Outdoor 这类左右翻转后仍合理的场景类别。
@@ -98,7 +98,7 @@ python scripts/run_experiment.py train \
 
 - [ ] `data/lsun_church256.md` 中补齐下载日期、大小和校验信息；（仍为占位，需在目标机回填）
 - [x] 100 kimg 短跑完成，并记录训练速度（约 23.3 sec/kimg 单卡）；
-- [x] 至少一次基线训练完成（双卡 2000 kimg，FID50k_full≈13，曲线单调下降）；
+- [x] 至少一次基线训练完成（双卡 2000 kimg，FID50k_full≈13，曲线总体下降但有局部波动）；
 - [x] 生成固定 seed 样本（各组 `results/samples/p2-*`，另有插值/风格混合/截断/最近邻展示）；
 - [x] 产出 FID/KID/Precision/Recall（E1-E5 已离线补算，汇总于 `results/analysis/`）；
 - [ ] 汇总建筑结构、纹理重复、天空/边界伪影等失败模式，为报告分析提供依据（待人工挑图 + 撰写）。

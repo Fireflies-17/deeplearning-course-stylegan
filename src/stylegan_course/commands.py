@@ -52,7 +52,7 @@ def _options(values: Dict[str, Any]) -> List[str]:
 
 def build_train_command(
     config: Dict[str, Any],
-    resume: Optional[Path] = None,
+    warm_start: Optional[Path] = None,
     kimg: Optional[int] = None,
     backend_dry_run: bool = False,
 ) -> List[str]:
@@ -63,8 +63,10 @@ def build_train_command(
         raise ValueError("Unsupported StyleGAN2-ADA train options: {}".format(", ".join(unknown)))
     if kimg is not None:
         train["kimg"] = kimg
-    if resume is not None:
-        train["resume"] = str(resume)
+    if warm_start is not None:
+        # The upstream option is named --resume, but it only loads network
+        # weights. Optimizers, ADA state, and progress counters start over.
+        train["resume"] = str(warm_start)
 
     command = [
         sys.executable,

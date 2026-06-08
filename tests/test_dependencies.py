@@ -21,6 +21,10 @@ class DependencyTests(unittest.TestCase):
         self.assertIn("setuptools", preflight.BUILD_PACKAGE_FIX)
         self.assertIn("wheel", preflight.BUILD_PACKAGE_FIX)
 
+    def test_analysis_and_video_packages_are_recommended(self) -> None:
+        self.assertIn("imageio", preflight.RECOMMENDED_PACKAGES)
+        self.assertIn("matplotlib", preflight.RECOMMENDED_PACKAGES)
+
 
 if __name__ == "__main__":
     unittest.main()

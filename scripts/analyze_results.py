@@ -32,7 +32,7 @@ Usage::
 
 The run path may point either at a training subfolder (the one that contains
 ``stats.jsonl``) or at the parent ``outdir`` that holds numbered subfolders; in
-the latter case the most recently modified subfolder is used.
+the latter case the highest numbered run folder is used.
 """
 
 from __future__ import annotations
@@ -81,13 +81,16 @@ def find_run_dir(path: Path) -> Path:
     """Return the folder that actually contains stats.jsonl for ``path``."""
     if (path / "stats.jsonl").is_file():
         return path
-    candidates = sorted(
-        path.glob("**/stats.jsonl"),
-        key=lambda p: p.stat().st_mtime,
-    )
+    candidates = list(path.glob("**/stats.jsonl"))
     if not candidates:
         raise FileNotFoundError("No stats.jsonl found under {}".format(path))
-    return candidates[-1].parent
+
+    def sort_key(stats_file: Path) -> Tuple[int, float]:
+        match = re.match(r"(\d+)-", stats_file.parent.name)
+        run_number = int(match.group(1)) if match else -1
+        return run_number, stats_file.stat().st_mtime
+
+    return max(candidates, key=sort_key).parent
 
 
 def parse_stats(run_dir: Path) -> Dict[int, Dict[str, float]]:
@@ -112,12 +115,23 @@ def parse_stats(run_dir: Path) -> Dict[int, Dict[str, float]]:
     return rows
 
 
-def parse_metrics(run_dir: Path) -> Dict[int, Dict[str, float]]:
-    """Map snapshot kimg -> flattened metric results from every metric-*.jsonl."""
+def parse_metrics(
+    run_dir: Path,
+) -> Tuple[Dict[int, Dict[str, float]], Dict[Tuple[int, str], Dict[str, Any]]]:
+    """Map snapshot kimg to metrics and metadata about repeated evaluations.
+
+    When a metric was evaluated repeatedly for the same snapshot, the record
+    with the newest numeric timestamp is retained. File/line order is the
+    fallback when timestamps are absent. The metadata records evaluation count
+    so the selected value is explicit rather than silently "last wins".
+    """
     rows: Dict[int, Dict[str, float]] = {}
+    metadata: Dict[Tuple[int, str], Dict[str, Any]] = {}
+    sequence = 0
     for metric_file in sorted(run_dir.glob("metric-*.jsonl")):
         with metric_file.open("r", encoding="utf-8") as handle:
             for line in handle:
+                sequence += 1
                 line = line.strip()
                 if not line:
                     continue
@@ -130,14 +144,32 @@ def parse_metrics(run_dir: Path) -> Dict[int, Dict[str, float]]:
                 row = rows.setdefault(kimg, {})
                 for name, value in record.get("results", {}).items():
                     if isinstance(value, (int, float)):
-                        row[name] = float(value)
-    return rows
+                        key = (kimg, name)
+                        timestamp = record.get("timestamp")
+                        rank = (
+                            float(timestamp) if isinstance(timestamp, (int, float)) else float("-inf"),
+                            sequence,
+                        )
+                        meta = metadata.setdefault(
+                            key,
+                            {
+                                "count": 0,
+                                "rank": (float("-inf"), -1),
+                                "source_file": "",
+                            },
+                        )
+                        meta["count"] += 1
+                        if rank >= meta["rank"]:
+                            row[name] = float(value)
+                            meta["rank"] = rank
+                            meta["source_file"] = metric_file.name
+    return rows, metadata
 
 
 def collect_run(name: str, path: Path) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     run_dir = find_run_dir(path)
     stats = parse_stats(run_dir)
-    metrics = parse_metrics(run_dir)
+    metrics, metric_metadata = parse_metrics(run_dir)
 
     all_kimg = sorted(set(stats) | set(metrics))
     curve: List[Dict[str, Any]] = []
@@ -145,6 +177,9 @@ def collect_run(name: str, path: Path) -> Tuple[List[Dict[str, Any]], Dict[str, 
         row: Dict[str, Any] = {"run": name, "kimg": kimg}
         row.update(stats.get(kimg, {}))
         row.update(metrics.get(kimg, {}))
+        for metric_name in metrics.get(kimg, {}):
+            meta = metric_metadata[(kimg, metric_name)]
+            row["{}_eval_count".format(metric_name)] = meta["count"]
         curve.append(row)
 
     # Summary: final training scalars + best/last metric values.
@@ -165,6 +200,10 @@ def collect_run(name: str, path: Path) -> Tuple[List[Dict[str, Any]], Dict[str, 
         if not points:
             continue
         summary["{}_final".format(metric_name)] = points[-1][1]
+        summary["{}_final_kimg".format(metric_name)] = points[-1][0]
+        summary["{}_final_eval_count".format(metric_name)] = metric_metadata[
+            (points[-1][0], metric_name)
+        ]["count"]
         if "fid" in metric_name:
             best_kimg, best_val = min(points, key=lambda kv: kv[1])
             summary["{}_best".format(metric_name)] = best_val
@@ -342,12 +381,18 @@ def make_plots(curves: Dict[str, List[Dict[str, Any]]], outdir: Path) -> None:
         return
 
     panels = [
-        ("fid50k_full", "FID50k_full", "fid_learning_curve.png", True),
-        ("ada_p", "ADA probability", "ada_p_curve.png", False),
-        ("g_loss", "G loss", "g_loss_curve.png", False),
-        ("d_loss", "D loss", "d_loss_curve.png", False),
+        (
+            "fid50k_full",
+            "FID50k_full",
+            "fid_learning_curve.png",
+            True,
+            "Available FID checkpoints (single markers are final-only)",
+        ),
+        ("ada_p", "ADA probability", "ada_p_curve.png", False, None),
+        ("g_loss", "G loss", "g_loss_curve.png", False, None),
+        ("d_loss", "D loss", "d_loss_curve.png", False, None),
     ]
-    for column, ylabel, filename, log_y in panels:
+    for column, ylabel, filename, log_y, title in panels:
         fig, ax = plt.subplots(figsize=(7, 4.5))
         plotted = False
         for name, rows in curves.items():
@@ -356,7 +401,10 @@ def make_plots(curves: Dict[str, List[Dict[str, Any]]], outdir: Path) -> None:
                 continue
             xy.sort()
             xs, ys = zip(*xy)
-            ax.plot(xs, ys, marker="o", markersize=3, label=name)
+            if len(xy) == 1:
+                ax.scatter(xs, ys, s=28, label="{} (final only)".format(name))
+            else:
+                ax.plot(xs, ys, marker="o", markersize=3, label=name)
             plotted = True
         if not plotted:
             plt.close(fig)
@@ -365,6 +413,8 @@ def make_plots(curves: Dict[str, List[Dict[str, Any]]], outdir: Path) -> None:
         ax.set_ylabel(ylabel)
         if log_y:
             ax.set_yscale("log")
+        if title:
+            ax.set_title(title)
         ax.grid(True, alpha=0.3)
         ax.legend()
         fig.tight_layout()

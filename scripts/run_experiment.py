@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Unified command entry point for training, resume, generation, and evaluation."""
+"""Unified command entry point for training, warm-start, generation, and evaluation."""
 
 from __future__ import annotations
 
@@ -45,7 +45,19 @@ def main() -> None:
         help="Execute the official backend's configuration dry run.",
     )
 
-    resume = subparsers.add_parser("resume")
+    warm_start = subparsers.add_parser(
+        "warm-start",
+        help="Start a new run from network weights; optimizer/progress state is not restored.",
+    )
+    add_common(warm_start)
+    warm_start.add_argument("--network", default="latest")
+    warm_start.add_argument("--kimg", type=int)
+    warm_start.add_argument("--dry-run", action="store_true")
+
+    resume = subparsers.add_parser(
+        "resume",
+        help="Deprecated alias for warm-start; this is not interruption recovery.",
+    )
     add_common(resume)
     resume.add_argument("--network", default="latest")
     resume.add_argument("--kimg", type=int)
@@ -71,11 +83,17 @@ def main() -> None:
 
     if args.command == "train":
         command = build_train_command(config, backend_dry_run=args.dry_run)
-    elif args.command == "resume":
+    elif args.command in {"warm-start", "resume"}:
+        if args.command == "resume":
+            print(
+                "[deprecated] 'resume' only loads network weights. "
+                "Use 'warm-start'; optimizer/progress state is not restored.",
+                file=sys.stderr,
+            )
         network = resolve_network(config, args.network)
         command = build_train_command(
             config,
-            resume=network,
+            warm_start=network,
             kimg=args.kimg,
             backend_dry_run=args.dry_run,
         )

@@ -8,7 +8,10 @@ import math
 import random
 import subprocess
 import sys
+import zipfile
+from io import BytesIO
 from pathlib import Path
+from typing import Optional, Tuple
 
 from PIL import Image, ImageDraw
 
@@ -17,6 +20,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from stylegan_course.project import require_backend, resolve_path  # noqa: E402
+
+
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 def generate_synthetic(output: Path, count: int, resolution: int, seed: int) -> None:
@@ -74,7 +80,15 @@ def convert_dataset(
     max_images: int,
 ) -> None:
     if dest.exists():
-        print("Converted dataset already exists: {}".format(dest))
+        expected_resolution: Optional[Tuple[int, int]] = None
+        if resolution:
+            expected_resolution = parse_resolution(resolution)
+        validate_dataset_zip(
+            dest,
+            expected_count=max_images or None,
+            expected_resolution=expected_resolution,
+        )
+        print("Converted dataset already exists and passed validation: {}".format(dest))
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
     command = [
@@ -84,10 +98,7 @@ def convert_dataset(
         "--dest={}".format(dest),
     ]
     if resolution:
-        try:
-            width, height = [int(value) for value in resolution.lower().split("x", 1)]
-        except ValueError:
-            raise ValueError("Resolution must use the form WIDTHxHEIGHT, e.g. 256x256")
+        width, height = parse_resolution(resolution)
         command.extend(["--width={}".format(width), "--height={}".format(height)])
     if transform:
         command.append("--transform={}".format(transform))
@@ -95,6 +106,51 @@ def convert_dataset(
         command.append("--max-images={}".format(max_images))
     print("$ {}".format(" ".join(command)), flush=True)
     subprocess.run(command, cwd=str(ROOT), check=True)
+
+
+def parse_resolution(value: str) -> Tuple[int, int]:
+    try:
+        width, height = [int(item) for item in value.lower().split("x", 1)]
+    except (TypeError, ValueError):
+        raise ValueError("Resolution must use the form WIDTHxHEIGHT, e.g. 256x256")
+    if width <= 0 or height <= 0:
+        raise ValueError("Resolution values must be positive: {}".format(value))
+    return width, height
+
+
+def validate_dataset_zip(
+    path: Path,
+    expected_count: Optional[int] = None,
+    expected_resolution: Optional[Tuple[int, int]] = None,
+) -> None:
+    """Validate enough ZIP structure to avoid silently reusing a bad dataset."""
+    try:
+        with zipfile.ZipFile(path) as archive:
+            names = archive.namelist()
+            if "dataset.json" not in names:
+                raise RuntimeError("dataset.json is missing")
+            image_names = [
+                name for name in names if Path(name).suffix.lower() in IMAGE_SUFFIXES
+            ]
+            if not image_names:
+                raise RuntimeError("no image files were found")
+            if expected_count is not None and len(image_names) != expected_count:
+                raise RuntimeError(
+                    "found {} images, expected {}".format(len(image_names), expected_count)
+                )
+            if expected_resolution is not None:
+                with archive.open(image_names[0]) as handle:
+                    with Image.open(BytesIO(handle.read())) as image:
+                        if image.size != expected_resolution:
+                            raise RuntimeError(
+                                "first image is {}, expected {}".format(
+                                    image.size, expected_resolution
+                                )
+                            )
+    except (OSError, zipfile.BadZipFile, RuntimeError) as exc:
+        raise RuntimeError(
+            "Existing dataset ZIP failed validation: {} ({})".format(path, exc)
+        ) from exc
 
 
 def main() -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shlex
 import subprocess
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Any, Dict, Iterable, List, Optional
 ROOT = Path(__file__).resolve().parents[2]
 STYLEGAN2_ADA_URL = "https://github.com/NVlabs/stylegan2-ada-pytorch.git"
 STYLEGAN2_ADA_COMMIT = "d72cc7d041b42ec8e806021a205ed9349f87c6a4"
+SNAPSHOT_RE = re.compile(r"network-snapshot-(\d+)\.pkl$")
 
 
 def resolve_path(value: str) -> Path:
@@ -78,7 +80,13 @@ def find_latest_snapshot(config: Dict[str, Any]) -> Path:
     snapshots = list(outdir.glob("**/network-snapshot-*.pkl"))
     if not snapshots:
         raise FileNotFoundError("No network snapshot found below {}".format(outdir))
-    return max(snapshots, key=lambda path: path.stat().st_mtime)
+
+    def sort_key(path: Path) -> tuple:
+        match = SNAPSHOT_RE.search(path.name)
+        kimg = int(match.group(1)) if match else -1
+        return kimg, path.stat().st_mtime
+
+    return max(snapshots, key=sort_key)
 
 
 def resolve_network(config: Dict[str, Any], value: str) -> Path:

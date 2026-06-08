@@ -33,7 +33,15 @@ REQUIRED_PACKAGES = [
     "tqdm",
     "wheel",
 ]
-RECOMMENDED_PACKAGES = ["ninja", "pyspng", "imageio_ffmpeg", "lmdb", "cv2"]
+RECOMMENDED_PACKAGES = [
+    "ninja",
+    "pyspng",
+    "imageio",
+    "imageio_ffmpeg",
+    "matplotlib",
+    "lmdb",
+    "cv2",
+]
 
 
 def package_status(names: List[str]) -> List[str]:

@@ -29,7 +29,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/baseline/p0_smoke.json")
     parser.add_argument("--skip-bootstrap", action="store_true")
-    parser.add_argument("--skip-resume", action="store_true")
+    parser.add_argument(
+        "--skip-warm-start",
+        "--skip-resume",
+        dest="skip_warm_start",
+        action="store_true",
+        help="Skip the second run initialized from the first run's network weights.",
+    )
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -46,10 +52,10 @@ def main() -> None:
     print("Initial snapshot: {}".format(first_snapshot))
 
     final_snapshot = first_snapshot
-    if not args.skip_resume:
-        run_command(build_train_command(config, resume=first_snapshot, kimg=1))
+    if not args.skip_warm_start:
+        run_command(build_train_command(config, warm_start=first_snapshot, kimg=1))
         final_snapshot = find_latest_snapshot(config)
-        print("Resume snapshot: {}".format(final_snapshot))
+        print("Warm-start snapshot: {}".format(final_snapshot))
 
     run_command(build_generate_command(config, final_snapshot))
     run_command(

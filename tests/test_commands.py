@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sys
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -63,12 +65,16 @@ class CommandTests(unittest.TestCase):
         # Offline evaluation must disable mirroring so the FID reference set matches
         # the unmirrored full distribution, regardless of the mirror used in training.
         self.assertIn("--mirror=false", joined)
+        self.assertIn("--gpus=1", joined)
 
     def test_p2_configs_use_fixed_budget_and_unmirrored_evaluation(self) -> None:
         p2_configs = [
+            "configs/baseline/p2_lsun_church256_baseline_seed1_1500.json",
             "configs/baseline/p2_lsun_church256_noada_1500.json",
+            "configs/baseline/p2_lsun_church256_noada_seed1_1500.json",
             "configs/baseline/p2_lsun_church256_fixedp02_1500.json",
             "configs/baseline/p2_lsun_church256_subset50k_ada_1500.json",
+            "configs/baseline/p2_lsun_church256_subset50k_ada_seed1_1500.json",
             "configs/baseline/p2_lsun_church256_target04_1500.json",
             "configs/baseline/p2_lsun_church256_target08_1500.json",
         ]
@@ -85,6 +91,8 @@ class CommandTests(unittest.TestCase):
                 self.assertIn("--metrics=none", train)
                 # Every group evaluates against the unmirrored full distribution.
                 self.assertIn("--mirror=false", evaluate)
+                # pr50k3 cleanup is unstable with two GPUs under the locked stack.
+                self.assertIn("--gpus=1", evaluate)
 
     def test_p1_generate_command_is_unconditional(self) -> None:
         config = load_config("configs/baseline/p1_lsun_church256_short.json")
@@ -108,6 +116,43 @@ class CommandTests(unittest.TestCase):
         config["train"]["not_an_official_option"] = True
         with self.assertRaises(ValueError):
             build_train_command(config)
+
+    def test_warm_start_command_and_resume_alias_are_explicit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            snapshot = Path(directory) / "network-snapshot-000001.pkl"
+            snapshot.touch()
+            base = [
+                sys.executable,
+                str(ROOT / "scripts" / "run_experiment.py"),
+            ]
+            common = [
+                "--config",
+                "configs/baseline/p0_smoke.json",
+                "--network",
+                str(snapshot),
+                "--kimg",
+                "1",
+                "--print-only",
+            ]
+            warm_start = subprocess.run(
+                base + ["warm-start"] + common,
+                cwd=str(ROOT),
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.assertIn("--resume=", warm_start.stdout)
+            self.assertNotIn("deprecated", warm_start.stderr)
+
+            resume = subprocess.run(
+                base + ["resume"] + common,
+                cwd=str(ROOT),
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            self.assertIn("--resume=", resume.stdout)
+            self.assertIn("optimizer/progress state is not restored", resume.stderr)
 
 
 if __name__ == "__main__":

@@ -36,4 +36,5 @@ __pycache__/
 !/results/nn/.gitkeep
 
 # Course materials currently kept outside version control.
-/报告模板.doc
+/report/course_materials/*.doc
+/report/course_materials/*.pdf

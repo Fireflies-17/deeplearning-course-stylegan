@@ -1,8 +1,10 @@
 # Additional packages for the selected PyTorch 2.8 / Python 3.12 / CUDA 12.8 image.
 # PyTorch and torchvision are intentionally not reinstalled here.
 click>=8.4.0,<9
+imageio>=2.36,<3
 imageio-ffmpeg==0.6.0
 lmdb==1.6.2
+matplotlib>=3.9,<3.11
 ninja==1.11.1.4
 # torch 2.8.0+cu128 wheels are built against NumPy 2.x; NumPy 1.x breaks
 # torch.from_numpy with "expected np.ndarray (got numpy.ndarray)". Upper bound
