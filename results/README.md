@@ -10,4 +10,17 @@
   `summary.csv` 为每个指标单独记录 `*_final_kimg` 和 `*_final_eval_count`，避免把不同快照的指标误认为
   来自同一个模型。FID 图中只有一个评估点的实验以散点显示，不代表完整学习曲线。
 
+正式证据口径不直接以汇总表为唯一来源。`scripts/build_evidence.py` 会重新读取各 run 的
+`metric-*.jsonl`、`stats.jsonl` 和配置，生成 `evidence/experiment_manifest.csv`，并记录每项指标的
+原始文件、快照 kimg、重复评估次数和解释范围。
+
+视觉证据分为三类：
+
+- `evidence/visual/failure_cases.csv`：四组 P2 固定 seed 样例，共 64 张逐张标注；
+- `evidence/visual/watermark_annotations.csv`：88 张独立生成样本，允许计算独立样本比例；
+- `evidence/visual/interpolation_watermark_audit.csv`：151 帧相关轨迹，只分析连续出现区间，不并入比例。
+
+`nn/e1-final/` 只支持当前 8 个生成样本的局部结论。完整核验和禁止扩大的表述见
+`evidence/nearest_neighbor_audit.md`。
+
 生成产物默认不纳入版本控制。

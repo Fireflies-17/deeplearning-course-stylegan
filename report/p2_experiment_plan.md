@@ -107,7 +107,7 @@ python scripts/run_experiment.py evaluate \
 NCCL/TCPStore 拆进程组报错导致该指标不落盘。因此所有正式配置已统一为**单卡评估**（`gpus=1`、
 `mirror=false`）；多卡机可一卡一组并行。E1 同预算锚点取最接近 1500 的
 `network-snapshot-001512.pkl`（+12 kimg）。
-评估所需的 `inception-2015-12-05.pkl` / `vgg16.pt` 从 NVIDIA CDN 下载在国内很慢，需提前用学术加速或手动
+评估所需的 `inception-2015-12-05.pt` / `vgg16.pt` 从 NVIDIA CDN 下载在国内很慢，需提前用学术加速或手动
 放入 `~/.cache/dnnlib/downloads/`（命名 `<url-md5>_<文件名>`）。
 
 ## 生成阶段分析
@@ -181,7 +181,7 @@ FID（均值 [min, max]，由 `analyze_results.py --seed-group` 生成 `results/
 
 ## 验收与假设
 
-- 所有配置先通过 `--dry-run`，`tests/` 12 项测试继续通过，且测试断言评估命令含 `--mirror=false`、
+- 所有配置先通过 `--dry-run`，`tests/` 中全部不依赖 GPU 的测试继续通过，且测试断言评估命令含 `--mirror=false`、
   P2 配置 `kimg=1500`。
 - 1500 kimg 结果解释为固定预算比较，不宣称完全收敛。
 - 单训练种子结果作为系统性探索，不作统计显著性声明。ADA 开/关轴补 seed=1 后以 n=2 的

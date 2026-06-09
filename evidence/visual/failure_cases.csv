@@ -1,0 +1,65 @@
+group,seed,source_path,structure,layout,texture,object_artifact,watermark,diversity_issue,severity,confidence,notes
+E2,0,results/samples/p2-lsun-church256-100k-noada-1500/seed0000.png,moderate,mild,moderate,mild,absent,none,medium,high,Detached and softened building masses with smeared boundaries.
+E2,1,results/samples/p2-lsun-church256-100k-noada-1500/seed0001.png,mild,none,mild,moderate,absent,mild,medium,high,Foreground people and vehicles collapse into dark repeated blobs.
+E2,2,results/samples/p2-lsun-church256-100k-noada-1500/seed0002.png,moderate,mild,severe,mild,present,none,high,high,Large pseudo-stock watermark and footer text dominate the image.
+E2,3,results/samples/p2-lsun-church256-100k-noada-1500/seed0003.png,moderate,mild,moderate,mild,absent,none,medium,high,Tower and adjoining facades are fused at the crop boundary.
+E2,4,results/samples/p2-lsun-church256-100k-noada-1500/seed0004.png,mild,moderate,moderate,mild,absent,none,medium,medium,Curved ground boundary and softened side building reduce spatial coherence.
+E2,5,results/samples/p2-lsun-church256-100k-noada-1500/seed0005.png,moderate,mild,moderate,mild,absent,mild,medium,high,Multiple towers merge and repeat ornamental elements.
+E2,6,results/samples/p2-lsun-church256-100k-noada-1500/seed0006.png,moderate,mild,moderate,mild,absent,mild,medium,high,Repeated spires and facade details lack stable geometry.
+E2,7,results/samples/p2-lsun-church256-100k-noada-1500/seed0007.png,mild,none,mild,mild,absent,none,low,high,Mostly coherent small church with minor window and edge deformation.
+E2,8,results/samples/p2-lsun-church256-100k-noada-1500/seed0008.png,mild,none,moderate,mild,absent,none,medium,medium,Facade texture is washed out and openings are inconsistently shaped.
+E2,9,results/samples/p2-lsun-church256-100k-noada-1500/seed0009.png,moderate,mild,moderate,mild,absent,mild,medium,high,Central tower openings and facade levels are structurally inconsistent.
+E2,10,results/samples/p2-lsun-church256-100k-noada-1500/seed0010.png,moderate,mild,moderate,mild,absent,mild,medium,high,Over-dense ornament and arch geometry create a fused facade.
+E2,11,results/samples/p2-lsun-church256-100k-noada-1500/seed0011.png,mild,mild,moderate,mild,absent,none,medium,medium,Strong color smearing and uncertain boundaries around the right tower.
+E2,12,results/samples/p2-lsun-church256-100k-noada-1500/seed0012.png,mild,mild,moderate,mild,absent,none,medium,medium,Vegetation and building edges dissolve into painterly texture.
+E2,13,results/samples/p2-lsun-church256-100k-noada-1500/seed0013.png,moderate,mild,moderate,moderate,absent,mild,medium,high,Spire layout and fountain-like foreground objects are malformed.
+E2,14,results/samples/p2-lsun-church256-100k-noada-1500/seed0014.png,mild,none,mild,moderate,absent,none,medium,high,Foreground people become elongated black silhouettes.
+E2,15,results/samples/p2-lsun-church256-100k-noada-1500/seed0015.png,moderate,mild,moderate,severe,absent,mild,high,high,Fused buildings and large black foreground figures create a severe artifact.
+E3,0,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0000.png,severe,mild,severe,mild,absent,none,high,high,Chimney and wall masses are vertically smeared and structurally broken.
+E3,1,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0001.png,moderate,mild,moderate,moderate,absent,mild,medium,high,Dense spires and foreground crowd texture collapse into repeated detail.
+E3,2,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0002.png,moderate,mild,severe,mild,present,none,high,high,Prominent letter-like watermark overlays the central church.
+E3,3,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0003.png,mild,mild,moderate,mild,absent,none,medium,medium,Long facade has inconsistent windows and softened roof geometry.
+E3,4,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0004.png,severe,severe,moderate,mild,absent,none,high,high,Disconnected hilltop building and implausible ground layout.
+E3,5,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0005.png,moderate,mild,moderate,mild,absent,mild,medium,high,Twin towers and lower facade merge without stable separations.
+E3,6,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0006.png,mild,mild,moderate,mild,absent,none,medium,medium,Coherent silhouette but repeated windows and softened foreground boundaries.
+E3,7,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0007.png,moderate,mild,moderate,severe,absent,none,high,high,Facade is incomplete and foreground objects become large black blobs.
+E3,8,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0008.png,mild,mild,moderate,moderate,absent,none,medium,medium,Lower facade and people are blurred into repeated vertical marks.
+E3,9,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0009.png,moderate,mild,moderate,mild,absent,mild,medium,high,Cropped tower contains distorted openings and unstable ornament.
+E3,10,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0010.png,mild,mild,moderate,moderate,absent,none,medium,medium,Foreground vegetation and people merge into dark repetitive texture.
+E3,11,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0011.png,mild,none,mild,mild,absent,none,low,high,Generally coherent scene with minor roof and vegetation artifacts.
+E3,12,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0012.png,moderate,mild,moderate,mild,absent,none,medium,high,Perspective and facade connections are inconsistent at the left crop.
+E3,13,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0013.png,moderate,mild,moderate,mild,absent,mild,medium,high,Front arches and towers repeat and merge into an overbuilt facade.
+E3,14,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0014.png,mild,mild,moderate,mild,absent,mild,medium,medium,Multiple towers are plausible but fine geometry remains unstable.
+E3,15,results/samples/p2-lsun-church256-100k-fixedp02-1500/seed0015.png,moderate,mild,moderate,moderate,absent,none,medium,high,Distant structures and ground objects dissolve into ambiguous forms.
+E4,0,results/samples/p2-lsun-church256-50k-ada-1500/seed0000.png,severe,mild,severe,mild,absent,mild,high,high,Main tower collapses into an implausible dark vertical mass.
+E4,1,results/samples/p2-lsun-church256-50k-ada-1500/seed0001.png,mild,none,mild,mild,absent,none,low,high,Mostly coherent church with minor roof and facade deformation.
+E4,2,results/samples/p2-lsun-church256-50k-ada-1500/seed0002.png,moderate,moderate,severe,mild,present,none,high,high,Large reversed letter-like watermark and footer text obscure the scene.
+E4,3,results/samples/p2-lsun-church256-50k-ada-1500/seed0003.png,moderate,mild,moderate,mild,absent,none,medium,high,Cropped facade and dome have inconsistent connections and scale.
+E4,4,results/samples/p2-lsun-church256-50k-ada-1500/seed0004.png,severe,moderate,severe,mild,absent,mild,high,high,Tower is nearly silhouette-black with broken attachment to the base.
+E4,5,results/samples/p2-lsun-church256-50k-ada-1500/seed0005.png,moderate,mild,moderate,mild,absent,mild,medium,high,Twin towers and central roof fuse into repeated vertical structure.
+E4,6,results/samples/p2-lsun-church256-50k-ada-1500/seed0006.png,mild,mild,moderate,mild,absent,none,medium,medium,Foreground and distant buildings blur into irregular texture.
+E4,7,results/samples/p2-lsun-church256-50k-ada-1500/seed0007.png,moderate,mild,moderate,mild,absent,none,medium,high,Right-side building masses merge and lose window alignment.
+E4,8,results/samples/p2-lsun-church256-50k-ada-1500/seed0008.png,moderate,mild,moderate,mild,absent,mild,medium,high,Dark tower and adjacent structures have unstable boundaries.
+E4,9,results/samples/p2-lsun-church256-50k-ada-1500/seed0009.png,mild,mild,moderate,mild,absent,none,medium,medium,Long church body is coherent but windows and roof texture repeat.
+E4,10,results/samples/p2-lsun-church256-50k-ada-1500/seed0010.png,moderate,mild,moderate,moderate,absent,mild,medium,high,Ornate facade and foreground objects merge into dense detail.
+E4,11,results/samples/p2-lsun-church256-50k-ada-1500/seed0011.png,mild,mild,mild,mild,absent,none,low,high,Strong framing shadow but central church remains largely coherent.
+E4,12,results/samples/p2-lsun-church256-50k-ada-1500/seed0012.png,mild,none,mild,mild,absent,mild,low,high,Stable tower composition with minor foreground deformation.
+E4,13,results/samples/p2-lsun-church256-50k-ada-1500/seed0013.png,mild,none,moderate,mild,absent,none,medium,medium,Facade ornament and roof edges are locally smeared.
+E4,14,results/samples/p2-lsun-church256-50k-ada-1500/seed0014.png,mild,mild,moderate,mild,absent,mild,medium,medium,Coherent central building with repeated windows and soft side structures.
+E4,15,results/samples/p2-lsun-church256-50k-ada-1500/seed0015.png,mild,none,mild,mild,absent,mild,low,high,Mostly coherent narrow tower with minor base and roof artifacts.
+E5,0,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0000.png,moderate,mild,moderate,mild,absent,none,medium,high,Facade is warped and partially fused with trees at both sides.
+E5,1,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0001.png,moderate,mild,moderate,mild,absent,mild,medium,high,Dense repeated spires and ornament reduce structural separation.
+E5,2,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0002.png,mild,mild,moderate,mild,absent,none,medium,medium,Tree canopy and white facade merge into softened boundaries.
+E5,3,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0003.png,mild,none,moderate,mild,absent,none,medium,medium,Dark facade texture obscures windows and lower structure.
+E5,4,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0004.png,moderate,mild,moderate,moderate,absent,none,medium,high,Side tower is poorly attached and foreground people are malformed.
+E5,5,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0005.png,moderate,mild,mild,moderate,absent,mild,medium,high,Tower geometry is uneven and the foreground crowd becomes black blobs.
+E5,6,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0006.png,moderate,mild,moderate,mild,absent,none,medium,high,Multiple roof levels and foreground textures merge without clean edges.
+E5,7,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0007.png,mild,none,moderate,mild,possible,mild,medium,medium,Faint letter-like artifact appears at the right edge; geometry is otherwise plausible.
+E5,8,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0008.png,mild,mild,mild,mild,absent,none,low,high,Mostly coherent scene with minor facade and ground deformation.
+E5,9,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0009.png,mild,none,moderate,mild,absent,none,medium,medium,Blue-white tower texture is over-smoothed and locally repeated.
+E5,10,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0010.png,moderate,mild,moderate,severe,present,none,high,high,Letter-like mark and severe black foreground silhouettes are both visible.
+E5,11,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0011.png,mild,none,mild,moderate,absent,none,medium,high,Church is coherent but the foreground crowd is smeared.
+E5,12,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0012.png,moderate,mild,moderate,severe,absent,mild,high,high,Dense spires and repeated foreground objects create severe clutter.
+E5,13,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0013.png,moderate,mild,severe,moderate,present,none,high,high,Large watermark-like text and footer are reproduced across the image.
+E5,14,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0014.png,moderate,mild,moderate,severe,absent,mild,high,high,Foreground becomes a repeated black mass below an over-detailed facade.
+E5,15,results/samples/p2-lsun-church256-100k-ada-target04-1500/seed0015.png,mild,none,mild,mild,absent,none,low,high,Simple facade is largely coherent with minor window deformation.

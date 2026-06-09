@@ -1,0 +1,6 @@
+figure_id,path,purpose,source_scope,restriction
+F1,evidence/figures/p2_fixed_seed_comparison.png,Same-seed qualitative comparison across four retained P2 groups.,"seeds 0, 3, 7, 12; no E1 fair-point samples retained",Do not present as a five-group E1-E5 comparison.
+F2,evidence/figures/failure_cases_grid.png,Representative high/medium severity generated-image failures.,selected from the complete 64-image annotation table,Selection illustrates failure modes; it is not a frequency plot.
+F3,evidence/figures/watermark_trajectory.png,Watermark-like contamination along the E1 W-space interpolation.,10 selected frames from the independently audited 151-frame trajectory,Trajectory frames are correlated and excluded from independent-sample rates.
+F4,results/samples/stylemix/grid.png,Style-mixing and contamination-transfer example.,retained E1 final-model style-mixing grid,Not used for watermark frequency estimates.
+F5,results/nn/e1-final/nn_seed0000.png,Example generated image with three nearest real images.,one of eight audited generated seeds,Read together with the full nearest-neighbor audit.

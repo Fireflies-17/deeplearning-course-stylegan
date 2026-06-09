@@ -98,7 +98,7 @@ python scripts/run_p0.py --config configs/baseline/p0_smoke.json
 训练崩溃）。换机器后务必重新 `pip install -r requirements-gpu.txt` 并用训练所用的解释器验证：
 `python -c "import numpy,torch;print(numpy.__version__);torch.from_numpy(numpy.zeros(3))"`。
 
-注意：评估指标依赖从 NVIDIA CDN 下载特征网络——`inception-2015-12-05.pkl`（FID/KID/最近邻）和
+注意：评估指标依赖从 NVIDIA CDN 下载特征网络——`inception-2015-12-05.pt`（FID/KID/最近邻）和
 `vgg16.pt`（pr50k3 的 Precision/Recall）。该 CDN 在国内极慢甚至超时。可先开学术加速再评估，或手动下载后
 按 `<url-md5>_<文件名>` 命名放入 `~/.cache/dnnlib/downloads/`。下载一次即缓存，后续各组评估不再联网。
 
