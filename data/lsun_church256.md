@@ -116,10 +116,13 @@ python scripts/run_experiment.py train \
 ## 待补充验收
 
 - [x] 实现目标机元数据采集脚本与下载命令脱敏；
-- [ ] 记录下载日期和实际来源；（**仍缺，等待目标机 JSON 回传**）
-- [ ] 记录原始 LMDB 或图片目录大小；（**仍缺，等待目标机 JSON 回传**）
-- [ ] 记录 `data/processed/lsun-church-256-100k.zip` 文件大小、SHA-256 和 MD5；
-  （**仍缺，等待目标机 JSON 回传**）
+- [x] 记录下载日期和实际来源的恢复状态；（目标机无 shell 历史，二者无法恢复）
+- [x] 记录原始 LMDB 大小；（2 个文件，2,788,702,848 字节）
+- [x] 记录 `data/processed/lsun-church-256-100k.zip` 文件大小；
+  （19,712,169,438 字节）
+- [x] 记录转换 ZIP SHA-256；
+  （`0bef00af2e08661b1b76b17576863287a5403f71f6fc5ba58a7a3bbd225bc25d`）
+- [x] 记录转换 ZIP MD5；（`e3e655220014f8d52cb9858df4d77d36`）
 - [x] 确认转换日志显示图像数量为 100,000、分辨率为 256x256（基线 `log.txt` 已记录
   `Number of images: 100000` / `Image resolution: 256`）；
 - [x] 运行 `configs/baseline/p1_lsun_church256_short.json` 完成 100 kimg 短跑；
@@ -148,3 +151,28 @@ python scripts/collect_dataset_provenance.py \
 3. 只有文件时间：仅记为文件时间，不写成下载日期；
 4. 没有历史记录：实际来源和日期标为“未保留、无法恢复”；
 5. 本文前述官方页和 OpenDataLab 链接只属于计划来源，不能替代实际下载事实。
+
+## 目标机采集结果
+
+采集时间为 `2026-06-09T12:11:25.540217+00:00`。原始记录位于
+`evidence/provenance/lsun_target_machine.json`，验证摘要位于
+`evidence/provenance/provenance_summary.md`。
+
+| 项目 | 目标机事实 |
+|---|---|
+| 转换 ZIP | `/root/autodl-tmp/deeplearning-course-stylegan/data/processed/lsun-church-256-100k.zip` |
+| ZIP 大小 | 19,712,169,438 字节 |
+| ZIP 条目 | 100,001 |
+| 图像数量 | 100,000 |
+| 抽样图像 | 32 张，均为 256x256 RGB |
+| `dataset.json` | 存在，`labels: null` |
+| SHA-256 | `0bef00af2e08661b1b76b17576863287a5403f71f6fc5ba58a7a3bbd225bc25d` |
+| MD5 | `e3e655220014f8d52cb9858df4d77d36` |
+| 原始 LMDB | 2 个文件，共 2,788,702,848 字节 |
+| 下载历史 | `/root/.bash_history` 不存在 |
+| 实际来源 | 无法恢复 |
+| 下载日期 | 无法恢复 |
+
+ZIP 文件时间为 `2026-06-05T08:51:40.005719+00:00`，原始 LMDB 文件时间范围为
+`2026-06-05T08:03:33.937429+00:00` 至 `2026-06-05T08:04:07.229490+00:00`。
+这些只作为文件系统时间保留，不认定为下载时间。

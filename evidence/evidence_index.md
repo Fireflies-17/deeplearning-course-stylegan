@@ -20,8 +20,9 @@
 - `visual/interpolation_watermark_audit.csv`：151 帧插值轨迹的独立水印审计。
 - `nearest_neighbor_audit.md`：8 个生成样本、24 条近邻记录的完整性和结论边界。
 - `figure_manifest.csv`：证据图、来源范围和使用限制。
-- `provenance/`：目标机数据元数据。运行 `scripts/collect_dataset_provenance.py` 后生成
-  `lsun_target_machine.json`；在文件回传前，实际来源、下载日期、文件大小和哈希仍不得推测。
+- `provenance/lsun_target_machine.json`：目标机直接采集的文件大小、哈希、结构和环境原始记录。
+- `provenance/provenance_summary.md`：已验证的数据事实、来源判定与采集环境限制。
+- `provenance/transfer_receipt.md`：目标机证据压缩包的本地接收哈希和完整性记录。
 
 ## 固定结论
 
@@ -31,6 +32,7 @@
 - 单个正式训练 run 使用双卡；四卡和六卡机器用于并行调度多个双卡 run。
 - 水印是训练数据污染特征被学习和复现的证据，不等价于特定样本记忆。
 - 最近邻结论只覆盖当前 8 个生成样本，不证明模型总体不存在记忆。
+- 正式 ZIP 的大小、结构和哈希已回填；实际下载来源和日期因 shell 历史不可用而无法恢复。
 
 ## 重建与验证
 

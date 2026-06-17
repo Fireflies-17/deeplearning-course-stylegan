@@ -249,6 +249,9 @@ def build_manifest() -> List[Dict[str, Any]]:
                 "final_ada_p": summary.get("ada_p"),
                 "total_hours": summary.get("total_hours"),
                 "peak_gpu_mem_gb": summary.get("peak_gpu_mem_gb"),
+                "final_interval_peak_gpu_mem_gb": summary.get(
+                    "final_interval_peak_gpu_mem_gb"
+                ),
                 "mean_sec_per_kimg": summary.get("mean_sec_per_kimg"),
                 "fid_source": sources["fid50k_full"],
                 "fid_eval_count": counts["fid50k_full"],
@@ -363,6 +366,22 @@ def build_claims() -> List[Dict[str, str]]:
                 "scripts/run_p2_parallel.sh; scripts/run_p2_seed1.sh"
             ),
             "limitation": "Do not describe a single model as four- or six-GPU training.",
+        },
+        {
+            "claim_id": "C8",
+            "strength": "direct target-machine artifact evidence",
+            "allowed_wording": (
+                "The retained processed dataset contains 100,000 RGB images at "
+                "256x256 and is identified by the recorded SHA-256 and MD5 hashes."
+            ),
+            "evidence": (
+                "evidence/provenance/lsun_target_machine.json; "
+                "evidence/provenance/provenance_summary.md"
+            ),
+            "limitation": (
+                "The shell history was unavailable, so the actual download source "
+                "and download date remain unrecoverable. File times are not download dates."
+            ),
         },
     ]
 
@@ -649,6 +668,119 @@ def audit_nearest_neighbors(evidence_dir: Path) -> None:
     (evidence_dir / "nearest_neighbor_audit.md").write_text(text, encoding="utf-8")
 
 
+def validate_provenance(evidence_dir: Path) -> None:
+    path = evidence_dir / "provenance/lsun_target_machine.json"
+    if not path.is_file():
+        raise FileNotFoundError(
+            "Target-machine provenance is missing: {}".format(relative(path))
+        )
+    record = load_json(path)
+    dataset = record.get("dataset_zip", {})
+    raw = record.get("raw_dataset", {})
+    history = record.get("download_history", {})
+    dimensions = dataset.get("sampled_dimensions", [])
+    hashes = dataset.get("hashes", {})
+
+    errors: List[str] = []
+    if dataset.get("status") != "observed" or not dataset.get("exists"):
+        errors.append("processed dataset ZIP was not observed")
+    if dataset.get("image_count") != 100000:
+        errors.append("expected 100000 images, found {}".format(dataset.get("image_count")))
+    if not any(
+        item.get("width") == 256
+        and item.get("height") == 256
+        and item.get("mode") == "RGB"
+        for item in dimensions
+    ):
+        errors.append("sampled images do not establish 256x256 RGB")
+    if len(str(hashes.get("sha256", ""))) != 64:
+        errors.append("SHA-256 is missing or malformed")
+    if len(str(hashes.get("md5", ""))) != 32:
+        errors.append("MD5 is missing or malformed")
+    if raw.get("status") != "observed" or not raw.get("exists"):
+        errors.append("raw dataset directory was not observed")
+    if history.get("source_status") not in {
+        "recovered_with_date",
+        "recovered_without_date",
+        "unrecoverable",
+    }:
+        errors.append("download-history source status is missing")
+    if errors:
+        raise ValueError("invalid target provenance: {}".format("; ".join(errors)))
+
+    source_status = history["source_status"]
+    if source_status == "recovered_with_date":
+        source_text = "实际下载来源与带时间戳命令均已恢复。"
+    elif source_status == "recovered_without_date":
+        source_text = "实际下载命令已恢复，但下载日期未知。"
+    else:
+        source_text = "Shell 历史不可用，实际下载来源与下载日期无法恢复。"
+
+    environment = record.get("environment", {})
+    torch = environment.get("torch", {})
+    summary = """# LSUN 目标机溯源摘要
+
+采集时间（UTC）：{collected_at}
+
+## 已直接观察的文件事实
+
+- 转换 ZIP：`{zip_path}`
+- ZIP 大小：{zip_size} 字节
+- ZIP 文件时间（UTC）：{zip_mtime}
+- SHA-256：`{sha256}`
+- MD5：`{md5}`
+- ZIP 条目：{zip_entries}，其中图像 {image_count} 张、`dataset.json` 1 个
+- 抽样检查：{sample_count} 张，均为 256x256 RGB
+- 原始 LMDB：`{raw_path}`
+- 原始目录：{raw_files} 个文件，共 {raw_size} 字节
+- 原始文件时间范围（UTC）：{raw_earliest} 至 {raw_latest}
+
+文件时间只表示目标机文件系统中的修改时间，不认定为下载日期。
+
+## 下载来源判定
+
+{source_text}
+
+项目文档中的 LSUN 官方页和 OpenDataLab 只保留为计划来源，不能冒充实际下载事实。
+
+## 采集环境
+
+- 主机：`{hostname}`
+- 平台：`{platform}`
+- Python：`{python}`
+- PyTorch：`{torch_version}`
+- PyTorch CUDA：`{torch_cuda}`
+- NVCC：见目标机 JSON 原文
+
+本次采集进程未取得可用 GPU，`nvidia-smi` 也因权限不可用。该状态只描述元数据采集时的
+进程环境，不否定训练日志与配置中已经封闭的单卡、双卡、四卡和六卡调度事实。
+""".format(
+        collected_at=record.get("collected_at_utc"),
+        zip_path=dataset.get("path"),
+        zip_size=dataset.get("size_bytes"),
+        zip_mtime=dataset.get("modified_time_utc"),
+        sha256=hashes.get("sha256"),
+        md5=hashes.get("md5"),
+        zip_entries=dataset.get("zip_entry_count"),
+        image_count=dataset.get("image_count"),
+        sample_count=dataset.get("sampled_image_count"),
+        raw_path=raw.get("path"),
+        raw_files=raw.get("file_count"),
+        raw_size=raw.get("size_bytes"),
+        raw_earliest=raw.get("earliest_modified_time_utc"),
+        raw_latest=raw.get("latest_modified_time_utc"),
+        source_text=source_text,
+        hostname=environment.get("hostname"),
+        platform=environment.get("platform"),
+        python=environment.get("python"),
+        torch_version=torch.get("version"),
+        torch_cuda=torch.get("cuda_version"),
+    )
+    (evidence_dir / "provenance/provenance_summary.md").write_text(
+        summary, encoding="utf-8"
+    )
+
+
 def validate_references(evidence_dir: Path, figures: Sequence[Dict[str, str]]) -> None:
     for figure in figures:
         path = resolve_path(figure["path"])
@@ -664,6 +796,9 @@ def validate_references(evidence_dir: Path, figures: Sequence[Dict[str, str]]) -
         evidence_dir / "nearest_neighbor_audit.md",
         evidence_dir / "figure_manifest.csv",
         evidence_dir / "provenance/README.md",
+        evidence_dir / "provenance/lsun_target_machine.json",
+        evidence_dir / "provenance/provenance_summary.md",
+        evidence_dir / "provenance/transfer_receipt.md",
     ]
     missing = [relative(path) for path in required if not path.is_file()]
     if missing:
@@ -693,8 +828,9 @@ def write_index(evidence_dir: Path) -> None:
 - `visual/interpolation_watermark_audit.csv`：151 帧插值轨迹的独立水印审计。
 - `nearest_neighbor_audit.md`：8 个生成样本、24 条近邻记录的完整性和结论边界。
 - `figure_manifest.csv`：证据图、来源范围和使用限制。
-- `provenance/`：目标机数据元数据。运行 `scripts/collect_dataset_provenance.py` 后生成
-  `lsun_target_machine.json`；在文件回传前，实际来源、下载日期、文件大小和哈希仍不得推测。
+- `provenance/lsun_target_machine.json`：目标机直接采集的文件大小、哈希、结构和环境原始记录。
+- `provenance/provenance_summary.md`：已验证的数据事实、来源判定与采集环境限制。
+- `provenance/transfer_receipt.md`：目标机证据压缩包的本地接收哈希和完整性记录。
 
 ## 固定结论
 
@@ -704,6 +840,7 @@ def write_index(evidence_dir: Path) -> None:
 - 单个正式训练 run 使用双卡；四卡和六卡机器用于并行调度多个双卡 run。
 - 水印是训练数据污染特征被学习和复现的证据，不等价于特定样本记忆。
 - 最近邻结论只覆盖当前 8 个生成样本，不证明模型总体不存在记忆。
+- 正式 ZIP 的大小、结构和哈希已回填；实际下载来源和日期因 shell 历史不可用而无法恢复。
 
 ## 重建与验证
 
@@ -743,6 +880,7 @@ def main() -> None:
         ["figure_id", "path", "purpose", "source_scope", "restriction"],
     )
     audit_nearest_neighbors(evidence_dir)
+    validate_provenance(evidence_dir)
     write_index(evidence_dir)
     validate_references(evidence_dir, figures)
     print("Evidence package validated at {}".format(evidence_dir))

@@ -23,6 +23,7 @@ class BuildEvidenceTests(unittest.TestCase):
         self.assertIn("Do not claim less data is better", claims["C2"]["limitation"])
         self.assertIn("cannot establish", claims["C6"]["limitation"])
         self.assertIn("two GPUs", claims["C7"]["allowed_wording"])
+        self.assertIn("unrecoverable", claims["C8"]["limitation"])
 
 
 if __name__ == "__main__":

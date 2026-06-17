@@ -15,9 +15,10 @@ It writes:
 - ``<outdir>/interpolation.mp4``: optional, only if ``imageio`` (with an ffmpeg
   plugin) is importable; failure to write the video is non-fatal.
 
-This is a non-training visualization: a smooth, non-repeating walk is evidence
-that the model learned a continuous latent space rather than memorizing a few
-training images, and it pairs well with the truncation and style-mixing figures.
+This is a non-training visualization. A smooth walk supports a local continuity
+observation in the chosen latent path, but it does not establish the absence of
+training-sample memorization. Memorization requires a separate audit such as
+nearest-neighbor retrieval or membership-inference analysis.
 
 Requires the pinned StyleGAN2-ADA backend (run scripts/bootstrap_stylegan2_ada.py)
 and a CUDA GPU.

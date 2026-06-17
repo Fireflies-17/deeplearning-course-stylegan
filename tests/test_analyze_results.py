@@ -85,6 +85,27 @@ class AnalyzeResultsTests(unittest.TestCase):
             self.assertEqual(summary["fid50k_full_final_kimg"], 2000)
             self.assertEqual(summary["kid50k_full_final_kimg"], 1500)
 
+    def test_summary_distinguishes_run_peak_from_final_interval_peak(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run_dir = Path(directory)
+            write_jsonl(
+                run_dir / "stats.jsonl",
+                [
+                    {
+                        "Progress/kimg": {"mean": 0},
+                        "Resources/peak_gpu_mem_gb": {"mean": 17.6},
+                    },
+                    {
+                        "Progress/kimg": {"mean": 100},
+                        "Resources/peak_gpu_mem_gb": {"mean": 3.2},
+                    },
+                ],
+            )
+
+            _, summary = collect_run("E1", run_dir)
+            self.assertEqual(summary["peak_gpu_mem_gb"], 17.6)
+            self.assertEqual(summary["final_interval_peak_gpu_mem_gb"], 3.2)
+
     def test_parent_run_selection_uses_numeric_run_id(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "collected_at_utc": "2026-06-09T12:11:25.540217+00:00",
+  "evidence_policy": {
+    "file_timestamps_are_download_dates": false,
+    "planned_sources_are_actual_sources": false,
+    "missing_values_are_fabricated": false
+  },
+  "dataset_zip": {
+    "path": "/root/autodl-tmp/deeplearning-course-stylegan/data/processed/lsun-church-256-100k.zip",
+    "exists": true,
+    "status": "observed",
+    "size_bytes": 19712169438,
+    "modified_time_utc": "2026-06-05T08:51:40.005719+00:00",
+    "modified_time_interpretation": "file timestamp; not a download date",
+    "hashes": {
+      "sha256": "0bef00af2e08661b1b76b17576863287a5403f71f6fc5ba58a7a3bbd225bc25d",
+      "md5": "e3e655220014f8d52cb9858df4d77d36"
+    },
+    "zip_entry_count": 100001,
+    "image_count": 100000,
+    "dataset_json_present": true,
+    "dataset_json": {
+      "labels": null
+    },
+    "sampled_image_count": 32,
+    "sampled_dimensions": [
+      {
+        "width": 256,
+        "height": 256,
+        "mode": "RGB"
+      }
+    ]
+  },
+  "raw_dataset": {
+    "path": "/root/autodl-tmp/deeplearning-course-stylegan/data/raw/lsun/church_outdoor_train_lmdb",
+    "exists": true,
+    "status": "observed",
+    "file_count": 2,
+    "size_bytes": 2788702848,
+    "earliest_modified_time_utc": "2026-06-05T08:03:33.937429+00:00",
+    "latest_modified_time_utc": "2026-06-05T08:04:07.229490+00:00",
+    "modified_time_interpretation": "file timestamps; not download dates"
+  },
+  "download_history": {
+    "path": "/root/.bash_history",
+    "exists": false,
+    "status": "missing",
+    "candidate_commands": [],
+    "assessment": "download history unavailable",
+    "source_status": "unrecoverable"
+  },
+  "environment": {
+    "hostname": "autodl-container-3hy7n2qhcg-4855777a",
+    "platform": "Linux-5.15.0-78-generic-x86_64-with-glibc2.35",
+    "python": "3.12.3 | packaged by Anaconda, Inc. | (main, May  6 2024, 19:46:43) [GCC 11.2.0]",
+    "nvidia_smi": "unavailable: [Errno 13] Permission denied: 'nvidia-smi'",
+    "nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Fri_Feb_21_20:23:50_PST_2025\nCuda compilation tools, release 12.8, V12.8.93\nBuild cuda_12.8.r12.8/compiler.35583870_0",
+    "torch": {
+      "version": "2.8.0+cu128",
+      "cuda_version": "12.8",
+      "cuda_available": false,
+      "gpu_count": 0,
+      "gpus": []
+    }
+  }
+}

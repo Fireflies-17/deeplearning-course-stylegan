@@ -14,6 +14,10 @@ __pycache__/
 .idea/
 .vscode/
 
+# Tool state directories.
+/.ta-research-afp/
+/.review/
+
 # Large and generated experiment artifacts.
 /*.tar.gz
 /data/raw/
@@ -30,11 +34,21 @@ __pycache__/
 !/results/tables/.gitkeep
 /results/figures/*
 !/results/figures/.gitkeep
-/results/analysis/*
-!/results/analysis/.gitkeep
 /results/nn/*
 !/results/nn/.gitkeep
 
 # Course materials currently kept outside version control.
 /report/course_materials/*.doc
 /report/course_materials/*.pdf
+
+# Report draft sections (superseded by final_report.md).
+/report/discussion.md
+/report/findings.md
+/report/introduction.md
+/report/literature_review.md
+/report/methods.md
+/report/title_abstract_keywords.md
+/report/report_outline.md
+
+# Binary reference files.
+*.xlsx

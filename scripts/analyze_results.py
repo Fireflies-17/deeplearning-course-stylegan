@@ -187,9 +187,23 @@ def collect_run(name: str, path: Path) -> Tuple[List[Dict[str, Any]], Dict[str, 
     if stats:
         last_kimg = max(stats)
         summary["final_kimg"] = last_kimg
-        for column in ("total_hours", "peak_gpu_mem_gb", "ada_p"):
+        for column in ("total_hours", "ada_p"):
             if column in stats[last_kimg]:
                 summary[column] = stats[last_kimg][column]
+        peak_mem_values = [
+            row["peak_gpu_mem_gb"]
+            for row in stats.values()
+            if "peak_gpu_mem_gb" in row
+        ]
+        if peak_mem_values:
+            # The backend resets CUDA peak-memory statistics after every tick.
+            # The run-level peak is therefore the maximum of all interval peaks,
+            # not the value reported by the final interval.
+            summary["peak_gpu_mem_gb"] = max(peak_mem_values)
+        if "peak_gpu_mem_gb" in stats[last_kimg]:
+            summary["final_interval_peak_gpu_mem_gb"] = stats[last_kimg][
+                "peak_gpu_mem_gb"
+            ]
         sec_values = [r["sec_per_kimg"] for r in stats.values() if "sec_per_kimg" in r]
         if sec_values:
             summary["mean_sec_per_kimg"] = sum(sec_values) / len(sec_values)
