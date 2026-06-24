@@ -1,0 +1,277 @@
+% !TeX program = xelatex
+\documentclass[10pt]{article}
+\usepackage{course_report_style}
+
+\newcommand{\ReportTitle}{StyleGAN2-ADA的增强策略与生成性能：基于LSUN Church Outdoor的受控实验}
+\newcommand{\ReportAuthor}{朱炳政，3024244501}
+
+\begin{document}
+\reportmaketitle{\ReportTitle}{\ReportAuthor}
+
+\begin{reportbody}
+\reportsection{摘要}
+\reportpara{本研究面向有限数据生成实验，构建分级、可审计的评价流程，避免以单次 FID 直接判定模型优劣。实验基于 LSUN Church Outdoor 256×256 与固定 StyleGAN2-ADA 后端，在约 1500 kimg 曝光预算下比较 noaug、固定 p=0.2 与 ADA，并检验 50k/100k 数据规模和 ADA target=0.4/0.6。评价链整合 FID、KID、Precision、Recall、训练轨迹、失败标注、水印插值和最近邻检索，使分布指标、视觉失效和记忆风险能够相互校验。结果显示，ADA 相对 noaug 的 FID 优势在两个随机条件中一致，平均 Recall 更高；固定增强 Precision 较高但 Recall 最低。50k 与 target=0.4 的较好单项指标均受等效轮次、子集或单种子限制，不宜解释为一般最优。}
+\reportkeywords{StyleGAN2-ADA；生成对抗网络；自适应判别器增强；图像生成}
+\reportsection{1. 引言}
+\reportpara{高分辨率生成模型能输出结构完整、纹理清晰的图像，但清晰并不等于忠实覆盖目标分布。GAN 通过生成器与判别器的对抗博弈学习数据分布（Goodfellow et al., 2014），训练效果受网络结构、数据规模和判别器状态共同影响。有限数据下，判别器可能过早记住训练样本，使判别依据从语义规律退化为训练集匹配；生成器随之失去有效梯度，可能收缩到少数模式，或把水印等污染特征当作正常内容复现。因此，本项目关注的不只是模型能否生成图像，而是增强策略、评价口径和证据边界能否支撑对质量与多样性的判断。}
+\reportpara{StyleGAN 通过映射网络、逐层风格调制和噪声注入提升了高分辨率图像的可控生成能力（Karras et al., 2019）。其中，映射网络将输入潜变量变换到更解耦的中间潜空间，逐层调制使粗粒度布局与细粒度纹理可在不同尺度上受控，也便于后续用插值观察语义变化。StyleGAN2 进一步以权重调制与解调、路径长度正则等设计缓解结构伪影并改善潜空间插值（Karras et al., 2020a）。StyleGAN2-ADA 针对有限数据下的判别器过拟合，自适应调节增强概率（Karras et al., 2020b）；DiffAugment 则提供了可微增强路径（Zhao et al., 2020）。这些工作说明增强有效，但并不直接回答具体场景中 noaug、固定增强和 ADA 如何取舍，也不能消除数据规模、kimg 预算和 ADA target 带来的解释差异。}
+\reportpara{现有复现和课程实验常见三个解释缺口：一是训练预算、真实分布或评估翻转不一致时，指标排名难以归因于被考察因素；二是 FID 虽能概括 Inception 特征分布差异（Heusel et al., 2017），却不能区分样本逼真度与分布覆盖，Precision/Recall 才能拆开这两个维度（Kynkäänniemi et al., 2019）；三是较低分布距离既不能证明模型没有记忆训练样本，也不能排除数据污染被学习。这些缺口会使增强策略的效果被高估或误读。因此，只展示样本或报告单个 FID，不足以回答有限数据增强是否有效及其适用边界。}
+\reportpara{针对上述问题，本项目在 LSUN Church Outdoor 256×256 图像域中，以固定 StyleGAN2-ADA 后端和 100k、ADA target=0.6 基线构建一因素变化矩阵，比较 noaug、fixed p=0.2 和 ADA，并考察 50k/100k 数据规模及 target=0.4/0.6。该类别图像数量充足，且包含建筑轮廓、天际线、植被等便于人工审计的结构特征。公平比较统一采用约 1500 kimg 曝光预算，正式评价使用完整 100k 真实分布。ADA 开关和数据规模两条关键轴增加第二随机条件，并把定量指标、训练动态、固定种子样本、水印轨迹和最近邻审计纳入同一证据链。}
+\reportpara{本研究的问题可以表述为：\textbf{在 LSUN Church Outdoor 的有限数据条件下，数据增强策略、数据规模和 ADA target 如何影响 StyleGAN2-ADA 的生成质量、分布覆盖与训练行为？}}
+\reportpara{下文先梳理 GAN、StyleGAN2、有限数据增强和生成模型评价，再说明研究方法，包括数据、模型配置、因素矩阵和评价口径；随后呈现实验结果、局限与后续工作。各章围绕同一研究问题展开，并在结论处回到增强策略、数据规模和 target 的证据边界。}
+\reportsubsection{1.1 生成对抗网络及其训练问题}
+\reportpara{生成对抗网络通过生成器与判别器的两方博弈学习数据分布：生成器将潜变量映射为合成样本，判别器区分真实与生成样本，并在交替优化中形成对抗目标（Goodfellow et al., 2014）。这一框架无需显式设定真实分布的参数形式，但训练过程并不等同于一般监督学习。}
+\reportpara{GAN 的关键困难是判别器与生成器的学习速率容易失衡。若判别器过强，其反传梯度会失去有效方向，训练出现停滞或振荡；若生成器发现少数高分样本即可欺骗判别器，就会放弃覆盖多样模式，形成模式崩溃。因此，GAN 的问题不只是网络容量不足，还包括训练动态、模式覆盖和评价不确定性。}
+\reportpara{后续研究从距离度量和优化机制上改进稳定性。Wasserstein GAN 以 Wasserstein 距离重构训练目标，在分布支撑不重叠时仍能提供有意义的梯度，并使损失曲线具有更明确的诊断含义，从而缓解部分训练不稳定（Arjovsky et al., 2017）。但 WGAN 并未消除有限数据下的判别器记忆，也不能单独解决高分辨率图像中结构与纹理的协调生成问题；这些问题推动了 StyleGAN 系列在架构和训练策略上的演进。}
+\reportsubsection{1.2 从渐进式生成到 StyleGAN2}
+\reportpara{高分辨率 GAN 早期常通过逐步增加训练分辨率来稳定训练。Karras et al. (2018) 的渐进式生长使生成器和判别器从低分辨率起步，再逐层加入高分辨率模块，较好地学习从整体布局到局部细节的层级结构。但其潜变量到图像的映射仍较直接，语义因素缺少显式尺度控制，改变潜变量时容易牵连多个属性。}
+\reportpara{StyleGAN 将风格迁移思想引入生成器，用映射网络得到中间潜空间，并通过逐层风格调制控制不同尺度的特征，以噪声注入表达随机细节（Karras et al., 2019）。这提升了潜空间插值和尺度特定控制能力，使整体布局、纹理与随机细节可以分层观察。StyleGAN2 进一步用权重调制与解调替代原始归一化设计，取消渐进式生长，并引入路径长度正则以改善潜变量到图像映射的条件性（Karras et al., 2020a）。因此，StyleGAN 的演进重点不是单纯扩大模型，而是同时提升生成质量、潜空间可控性和伪影治理。}
+\reportpara{国内研究更多面向具体图像域，例如红外舰船、火焰和红外图像生成（李海军等，2022；秦魁等，2023；李冰等，2021）。这些工作说明 GAN 已扩展到目标稀缺或采集成本较高的专业场景，但其监督条件、评价目标和数据分布不同于 LSUN 无条件场景生成，因此主要用于说明应用脉络，不能替代 StyleGAN 系列论文对核心结构的定义。}
+\reportsubsection{1.3 有限数据条件下的增强策略}
+\reportpara{有限数据下，GAN 的主要风险不是生成器简单"看得少"，而是判别器先记住训练集。判别器若把训练样本特征与"真实"标签绑定，而非学习分布规律，生成器产生的新颖样本就会被惩罚，并被迫向少数记忆模式靠拢。}
+\reportpara{StyleGAN2-ADA 的做法是对真实图像和生成图像施加同一组近似非泄漏变换，并根据判别器过拟合信号动态调整增强概率（Karras et al., 2020b）。"非泄漏"强调增强不应成为真假样本的判别捷径；ADA 的控制器则在判别器过早饱和时提高增强概率，在过拟合减弱时降低概率。其关键不是离线扩充数据集，而是动态调节判别任务难度，并避免生成器学习增强变换本身。原论文显示该机制可在小样本场景中改善稳定性，但增强管线、目标值和数据规模仍需要结合具体任务检验。}
+\reportpara{DiffAugment 同样把增强同时作用于真实和生成样本，并让梯度通过可微增强回传（Zhao et al., 2020）。它与 ADA 都避免单侧增强造成泄漏；区别在于 ADA 强调按训练状态调节增强强度，DiffAugment 强调端到端可微变换。因此，是否增强、固定概率还是自适应概率、target 如何设置，都需要在统一预算和评价口径下比较。}
+\reportpara{中文文献也常用 GAN 服务于样本扩充、图像增强和超分辨率重建（张印等，2024；孟奇等，2021；林森、刘世本，2021；宋巍等，2021；柯舒婷等，2022）。这些范式与 ADA 的在线判别器正则化不同，若不区分机制，容易把生成式数据扩充、图像增强和判别器增强混为一类。}
+\reportsubsection{1.4 生成模型评价及其解释边界}
+\reportpara{GAN 评价需要同时处理样本逼真度与分布覆盖。FID 在预训练 Inception 特征空间中比较真实和生成样本的均值与协方差，是常用分布距离指标（Heusel et al., 2017），但其高斯假设和 ImageNet 特征并不完全贴合建筑场景。KID 使用核最大均值差异并提供无偏估计，为有限样本评价补充了统计视角（Bińkowski et al., 2018）。二者能概括整体匹配程度，适合做横向比较，却不能证明模型没有记忆训练样本，也不能说明提升来自逼真度还是覆盖度。}
+\reportpara{Precision/Recall 指标正是为拆分这两个维度而提出（Kynkäänniemi et al., 2019）：Precision 表示生成样本落入真实数据流形的比例，Recall 表示真实数据流形被生成分布覆盖的程度。若模型收缩到少数高频模式，Precision 可能较高而 Recall 下降，说明清晰样本并不必然代表覆盖充分。这个区分对固定增强概率尤其重要，也说明定量排序还需结合固定种子样本、潜空间插值和最近邻审计。}
+\reportpara{LSUN 数据集由半自动人机协同标注流程构建，覆盖大规模场景和物体类别（Yu et al., 2015）。但本实验实际使用的 50k/100k 子集、固定 kimg 曝光预算以及水印等污染特征，都会改变学习条件。因此，报告数据规模时必须同时交代子集构造、重复曝光、训练预算和溯源限制。}
+\reportsubsection{1.5 研究空白与本项目定位}
+\reportpara{已有研究分别提供了 StyleGAN2 架构、ADA/DiffAugment 有限数据训练方案，以及 FID、KID、Precision/Recall 等评价工具，但它们不会自动给出本课程实验的参数选择结论。在固定 kimg 预算下，数据规模会改变等效轮次；固定增强可能改变质量—覆盖权衡；ADA target 的排序也可能受随机条件影响。若只复现单一官方配置或只报告 FID，这些相互作用将被遮蔽。}
+\reportpara{因此，本项目在统一 StyleGAN2-ADA 后端上比较 noaug、固定增强和 ADA，并考察 50k/100k 数据规模及不同 ADA target。评价覆盖 FID、KID、Precision、Recall、训练动态、定性样本、水印轨迹和最近邻审计。项目重点是把已有方法放入一致的工程环境和证据链中，区分有重复支持的结论与探索性观察，而不是追求单次最优数值。}
+\reportpara{本报告的主要贡献如下：}
+\reportpara{1. \textbf{受控实验框架}：在统一后端、约 1500 kimg 曝光预算和统一评估分布下，构建增强策略、数据规模和 ADA target 的单因素变化矩阵，并为关键轴增加第二随机条件，使指标排序有可检查的随机性参照。2. \textbf{分级证据体系}：把结论分为有限重复支持、有边界重复观察和单条件探索，避免把有限随机条件下的排名直接推广。3. \textbf{多维评价链}：将 FID、KID、Precision/Recall、训练曲线、ADA 概率、固定种子样本、失败标注、水印轨迹和最近邻审计整合起来，区分质量改善、污染复现和训练样本记忆。}
+\reportsection{2. 研究方法}
+\reportsubsection{2.1 研究设计}
+\reportpara{本项目采用受控计算实验与复现性工程相结合的设计，考察 StyleGAN2-ADA 在 LSUN Church Outdoor 图像域中的训练与生成行为。研究聚焦增强策略、训练数据规模和 ADA target 三个因素，分析它们对生成质量、分布覆盖与训练动态的影响。实验以统一后端、统一预算和统一评估分布构建一因素变化矩阵，在课程预算内形成明确对照。}
+\reportpara{选择单因素变化矩阵，是因为全因子组合（三种增强方式 × 两种数据规模 × 两种 target × 两个随机种子）会产生远超预算的 run；同时，单因素对照更便于将指标变化归因于被操控变量。若在重复不足时使用全因子设计，多因素交互也难以可靠估计。}
+\reportpara{实验以 100k 数据、ADA target=0.6 为中心基线。主矩阵 E1-E5 均使用 seed 42，分别改变增强方式、数据规模或 ADA target；随后为 ADA 开关轴和数据规模轴增加 seed=1 的 E1b、E2b、E4b，因为这两条轴直接对应研究问题的核心比较。fixed p=0.2 与 target=0.4 因预算限制只作探索性条件。最终形成 8 个正式实验条件。}
+\reportsubsection{2.2 计算后端与运行环境}
+\reportpara{模型后端采用 NVIDIA \path|stylegan2-ada-pytorch|，固定上游提交 \texttt{\seqsplit{d72cc7d041b42ec8e806021a205ed9349f87c6a4}}。本项目以官方实现为模型基础，完成课程实验所需的工程适配、配置化运行和受控验证，而不是从零重写 StyleGAN2。固定提交哈希可避免上游更新带来的静默行为变化。统一入口 \path|scripts/run_experiment.py| 读取 JSON 配置，再由 \path|src/stylegan_course/commands.py| 构造训练、生成与评价命令，使实验变量显式保存在配置文件中。}
+\reportsubsubsection{2.2.1 个人实现内容与改进边界}
+\reportpara{个人实现包括：固定后端版本并编写五类兼容补丁；建立配置驱动的训练、权重热启动、生成和离线评价入口；实现数据转换与校验、环境预检、结果汇总、潜空间插值和最近邻检索；设计 E1-E5 因素矩阵与第二随机条件；建立指标、人工标注、数据溯源和允许表述之间的证据链。这些工作共同构成可复现实验系统。}
+\reportpara{目标训练环境为 Ubuntu 22.04、Python 3.12、PyTorch 2.8.0+cu128、CUDA 12.8 和 NumPy 2.x。为使固定后端在现代环境中运行，项目应用了五类兼容补丁：PyTorch 2.x 算子与采样器适配、Pillow 接口适配、Python 3.12 下 \path|distutils| 缺失处理、多卡快照一致性同步调整，以及 NumPy 2.x scalar 兼容。这些补丁只处理接口和运行时差异，不改变网络结构、损失函数、训练目标或实验因素。}
+\reportpara{每个正式训练 run 使用 2 张 GPU；四卡和六卡机器分别用于并行调度两个或三个独立双卡 run。正式 FID、KID 和 Precision/Recall 评估统一使用单卡。}
+\reportsubsection{2.3 数据集与预处理}
+\reportpara{正式数据为 LSUN Church Outdoor 训练集。原始 LMDB 经 NVIDIA 数据工具中心裁剪为 256×256 RGB，并封装为无类别标签 ZIP。中心裁剪用于保持预处理一致，避免不同实验因随机裁剪引入额外差异。正式文件包含 100,000 张图像和 \path|dataset.json|，抽样检查的 32 张图像均为 256×256 RGB；文件大小为 19,712,169,438 字节，SHA-256 为 \texttt{\seqsplit{0bef00af2e08661b1b76b17576863287a5403f71f6fc5ba58a7a3bbd225bc25d}}。}
+\reportpara{训练阶段所有条件均启用水平翻转，即 \path|mirror=true|。因此 E2 的 \path|noaug| 仅表示关闭 StyleGAN2-ADA 在线增强管线，不表示完全没有数据层面的翻转。E4 和 E4b 从同一 100k ZIP 中确定性选取 50,000 张图像；训练 seed 同时参与子集选择，因此两次 50k 条件既改变模型随机性，也改变实际子集，这一混杂在局限中单独说明。}
+\reportsubsection{2.4 模型配置与训练过程}
+\reportpara{所有正式条件采用上游 \path|paper256|、无条件生成设置。基线使用 512 维 Z 空间、512 维 W 空间和 8 层映射网络；生成器和判别器均使用 Adam，学习率 0.0025，beta 为 (0, 0.99)，R1 正则系数 1，全局 batch size 64，EMA 时间常数 20 kimg。除实验因素外，各组继承相同 \path|paper256| 设置。}
+\reportpara{ADA 与 fixed 条件使用 \path|bgc| 增强管线，覆盖像素搬移、几何变换和颜色变换。E1、E4 使用 ADA target=0.6，E5 使用 target=0.4；E3 固定 p=0.2；E2 关闭 ADA 管线。ADA 根据判别器过拟合统计动态调节增强概率，fixed 条件则全程保持 p=0.2。target 越低，控制器越早提高增强概率。}
+\reportpara{训练预算以 kimg 表示，即模型累计处理的图像数量。公平比较点统一为约 1500 kimg：E2-E5 和 E1b/E2b/E4b 均训练至 1500 kimg，E1 使用最接近预算点的 1512 kimg 快照；E1 的 2000 kimg 模型只用于最终展示、完整曲线和潜空间分析，不参与 1500 kimg 排名。固定 kimg 意味着 50k 条件比 100k 条件经历更多重复曝光，在 1500 kimg 下约为后者两倍，因此数据规模比较只能解释为"固定 kimg 条件下的表现"。}
+\reportsubsection{2.5 实验矩阵与控制变量}
+\reportpara{增强策略轴由 E1、E2、E3 构成，分别为 100k ADA、100k noaug 和 100k fixed p=0.2；数据规模轴比较 E1 与 50k ADA 的 E4；参数敏感性轴比较 E1 与 100k ADA target=0.4 的 E5。除被考察因素外，分辨率、网络配置、训练 seed、训练用卡数、训练预算和评价分布保持一致。各实验条件与控制变量关系见表 2-1，表中也标出重复条件和结论层级。}
+\par\end{multicols}
+\vspace{6pt}
+\begin{center}
+{\reportcaptionfont 表 2-1　实验矩阵\par}
+\vspace{3pt}
+{\fontsize{8.8pt}{10pt}\selectfont\renewcommand{\arraystretch}{1.05}
+\begin{tabularx}{\linewidth}{|C{0.07\linewidth}|C{0.08\linewidth}|C{0.13\linewidth}|C{0.10\linewidth}|C{0.06\linewidth}|C{0.18\linewidth}|Y|}
+\hline
+\textbf{实验} & \textbf{数据} & \textbf{增强} & \textbf{ADA target} & \textbf{seed} & \textbf{重复条件} & \textbf{结论层级} \\
+\hline
+E1 & 100k & ADA & 0.6 & 42 & E1b(seed=1) & 有限重复支持 \\
+\hline
+E2 & 100k & noaug & — & 42 & E2b(seed=1) & 有限重复支持 \\
+\hline
+E3 & 100k & fixed p=0.2 & — & 42 & 无 & 探索性 \\
+\hline
+E4 & 50k & ADA & 0.6 & 42 & E4b(seed=1) & 有边界重复观察 \\
+\hline
+E5 & 100k & ADA & 0.4 & 42 & 无 & 探索性 \\
+\hline
+\end{tabularx}
+}
+\end{center}
+\vspace{6pt}
+\begin{multicols}{2}
+\reportpara{重复条件 E1b、E2b、E4b 使用 seed=1，并维持 1500 kimg 与相同评价口径。E1/E1b 和 E2/E2b 可用于观察 ADA 开关在两种随机条件下的排序是否一致，其重要性在于：如果两个种子中 ADA 均优于 noaug，则这一结论具有初步的跨随机条件稳定性；若两个种子中结论方向不一致，则单种子结果的可靠性受到质疑。E4/E4b 同时包含模型随机性和 50k 子集差异，因此只作为不同随机性与不同子集下的重复条件，而非严格的纯重复。E3 与 E5 未设置第二随机条件，相关发现被预先限定为探索性结果，不作统计显著性或普遍最优声明。}
+\reportsubsection{2.6 定量评价}
+\reportpara{训练完成后，使用后端官方 \path|calc_metrics.py| 离线计算 \path|fid50k_full|、\path|kid50k_full| 和 \path|pr50k3_full|。所有正式评价均设置 \path|gpus=1|、\path|mirror=false|，并以完整 100k 原始分布为真实数据参照；50k 模型也对完整 100k 分布评价，而非只对其训练子集评价，以保证组间口径一致。若允许 50k 模型只对自身训练子集评价，则分布估计的参照不同，组间对比将失去意义。FID 与 KID 用于衡量 Inception 特征分布的整体差异，Precision 和 Recall 分别辅助分析样本保真度与真实分布覆盖。任何结论均不只依赖 FID。}
+\reportpara{分析脚本读取各 run 的 \path|stats.jsonl| 和 \path|metric-*.jsonl|，提取 FID、KID、Precision、Recall、ADA 概率、生成器与判别器损失、每 kimg 耗时、墙钟时间，以及各训练区间记录的单卡 CUDA 显存峰值。由于后端在每个 tick 后重置峰值统计，汇总时分别保留所有区间中的最大值和末段区间值，避免把末段值误写为全程峰值。若同一快照存在重复评价，保留时间戳最新的有效记录，同时记录评价次数。}
+\reportsubsection{2.7 定性分析与记忆风险审计}
+\reportpara{定性分析包括固定随机种子样本、W 空间插值、失败案例、水印审计和训练集最近邻。E2-E5 各选取 16 张固定 seed 样本，共 64 张，按建筑结构、场景布局、纹理、物体伪影、水印和多样性问题进行完整标注。使用固定 seed 是为了让每个模型的取样过程可复现，便于在同一展示框架下观察各条件的视觉特征；但不同模型独立训练，其潜空间并不对齐，因此相同 seed 值对应的生成内容不具有语义配对关系，不能把同 seed 图像的差异解释为因果对比。另对 88 张相互独立的生成样本进行水印标注，其中 8 张确认为存在水印类文字、1 张标记为疑似；对 E1 的 151 帧插值轨迹另行审计，其中 46 帧确认为存在、2 帧为疑似。由于插值帧彼此相关，两类样本不合并计算发生率。}
+\reportpara{W 空间（而非 Z 空间）插值的选择有其理由：W 空间经过映射网络变换，在局部上更接近线性解耦，插值轨迹更倾向于产生语义连续的过渡，而 Z 空间的直线插值可能经过低概率区域，产生视觉上不连贯的中间帧。在 W 空间中连续插值并审计水印出现位置，能够揭示水印是否已成为生成表示中可插值的连续属性，而非孤立出现的随机噪声。}
+\reportpara{最近邻审计使用与 FID 相同的官方 Inception 特征提取器。对 E1 最终模型的 seed 0-7 共 8 个生成样本提取 2048 维特征，逐张扫描完整训练集，在关闭真实集翻转的条件下计算 L2 距离，并为每个生成样本保存 Top-3 训练集近邻，共形成 24 条记录。使用与 FID 相同的特征空间，是为了使最近邻检索与分布指标保持方法上的一致性；在该空间中距离接近的图像对，理论上也是 FID 认为分布接近的图像对。该审计只能发现当前样本在这一特征空间中的近邻关系，不能排除在其他特征空间或更大样本量下存在的记忆现象。}
+\reportsubsection{2.8 可复现性与质量控制}
+\reportpara{项目在训练前执行环境预检、配置解析和后端 dry-run。非 GPU 测试共 28 项，覆盖命令构造、配置约束、数据校验和分析逻辑；25 个项目 Python 文件通过 AST 解析，11 份 JSON 配置可解析。测试同时断言正式评价使用单卡且 \path|mirror=false|，从流程上防止评价协议的意外变更。\path|scripts/build_evidence.py| 从原始指标、训练日志、配置、人工标注和近邻结果重建实验清单与结论边界，并检查 8 个正式条件的关键字段，确保每条声明都能追溯到具体来源文件。}
+\reportpara{研究质量从四个方面控制：第一，内部可比性通过统一后端、预算、分辨率和评价分布实现；第二，构念效度通过 FID、KID、Precision、Recall 与定性证据的多方法结合提高；第三，可重复性通过固定配置、seed、数据哈希和自动分析脚本保障；第四，可审计性通过实验清单、原始来源路径和"允许表述—限制条件"矩阵建立。}
+\reportsubsection{2.9 伦理与数据使用说明}
+\reportpara{本项目不涉及人体受试者、访谈、个人身份识别或干预实验，因此不适用知情同意和受访者匿名化程序。所用 LSUN Church Outdoor 主要为公共场景图像，相比人脸数据集具有较低的身份隐私风险。但数据中的图库水印和来源不完全可恢复仍构成数据治理问题，故项目不将生成水印作为模型能力，并在报告中明确数据污染、来源记录和使用边界。}
+\reportsection{3. 实验与结果分析}
+\reportpara{本章按照"训练过程—增强策略—数据规模—增强强度—视觉失效—污染与记忆审计"的顺序呈现实验结果。除特别说明外，核心横向比较均采用约 1500 kimg 的公平预算点；E1 的公平点为 1512 kimg，其余主实验为 1500 kimg。由于完整重复实验仅覆盖 E1、E2 和 E4，本文只在这三个条件上讨论跨种子稳定性，不对单种子结果作统计显著性推断。}
+\reportsubsection{3.1 基线训练：ADA 的启动与非单调收敛}
+\reportpara{E1（100k 数据、ADA、目标值 0.6）提供了本研究最完整的训练轨迹。训练早期的 FID 很高：0 kimg 时为 309.22，100 kimg 时为 317.93，表明模型尚未形成稳定的图像分布，这一阶段的指标波动属于正常的探索期，不宜用于条件优劣判断。}
+\reportpara{ADA 概率的变化轨迹揭示了控制器的工作机制。在训练初段，ADA 概率基本保持为零：0 kimg 时为 0，500 kimg 时仅为 0.0010，1000 kimg 时为 0.0133。这意味着在训练的前半程，判别器的过拟合程度尚未触发控制器的干预阈值——判别器虽然在学习，但在这一阶段其过拟合信号还未显著超出目标值，控制器因而维持较低的增强强度。此后增幅明显加快，1500 kimg 达到 0.1096，2000 kimg 达到 0.1531。这种"先观望、后介入"的动态表明，ADA 并非在训练一开始就施加干扰，而是在判别器逐渐表现出过拟合倾向后才被控制器持续推高增强概率，与原论文中描述的自适应反馈机制一致。}
+\reportimage[0.95\linewidth]{\detokenize{figures/fid_learning_curve.png}}{图 3-1　各实验条件的 FID 变化。仅 E1 有完整训练轨迹，其余为终点评价}
+\reportimage[0.95\linewidth]{\detokenize{figures/ada_p_curve.png}}{图 3-2　各实验条件的 ADA 增强概率轨迹。E2/E2b（noaug）恒为 0，E3（fixed p=0.2）恒定，ADA 条件按过拟合信号动态调节}
+\reportpara{图 3-3 和图 3-4 给出了所有实验条件的生成器与判别器损失曲线。各条件的损失在训练初期存在不同程度的尖峰波动，随后收敛至相似的范围（生成器损失约 1.2—2.5，判别器损失约 0.6—1.2），表明不同增强配置在训练稳定性方面未产生质变。E5（target=0.4）的生成器损失在中后段略低于其他条件，与其更强的增强压力一致。}
+\reportimage[0.95\linewidth]{\detokenize{figures/g_loss_curve.png}}{图 3-3　各实验条件的生成器损失变化}
+\reportimage[0.95\linewidth]{\detokenize{figures/d_loss_curve.png}}{图 3-4　各实验条件的判别器损失变化}
+\reportpara{后期 FID 并非单调下降。E1 在 1814 kimg 时的 FID 为 13.21，1915 kimg 时回升至 14.04，2000 kimg 又降至 13.00。这种非单调收敛在 GAN 训练中并不罕见：判别器与生成器之间的动态博弈使训练轨迹本身存在波动，加之 ADA 概率持续变化，某些时刻的快照可能处于两者相对平衡的稳定点，另一些时刻则可能偏离。因此，后续比较采用预先规定的预算点，而不是从每个条件中事后挑选最低 FID，以避免在回顾性最优化中引入选择性偏差。}
+\reportpara{E1 使用双卡完成 2000 kimg 训练，墙钟时间约 7.35 小时。日志记录的单卡区间显存峰值在初始化区间达到约 17.66 GB，末段区间为约 3.24 GB。}
+\reportsubsection{3.2 相同预算下的增强策略比较}
+\reportpara{表 3-1 汇总了主实验在公平预算点的指标。E1 与 E2 仅在是否使用 ADA 上形成最直接的对照。在 seed 42 条件下，E1 的 FID 为 16.63，低于无增强 E2 的 18.59，差值约 2 个单位；KID 也略低；Recall 由 E2 的 0.0283 提高到 E1 的 0.0602，约为两倍；Precision 则由 E2 的 0.5572 提高到 E1 的 0.5887。就单种子结果而言，ADA 在所有四项指标上均不劣于 noaug，且 Recall 的提升幅度最为明显，说明 ADA 对真实分布覆盖的改善效果在本次观察中尤为突出。}
+\par\end{multicols}
+\vspace{6pt}
+\begin{center}
+{\reportcaptionfont 表 3-1　约 1500 kimg 公平预算点的量化指标\par}
+\vspace{3pt}
+{\fontsize{8.8pt}{10pt}\selectfont\renewcommand{\arraystretch}{1.05}
+\begin{tabularx}{\linewidth}{|C{0.07\linewidth}|C{0.10\linewidth}|C{0.16\linewidth}|Y|Y|Y|Y|}
+\hline
+\textbf{实验} & \textbf{数据规模} & \textbf{增强设置} & \textbf{FID↓} & \textbf{KID↓} & \textbf{Precision↑} & \textbf{Recall↑} \\
+\hline
+E1 & 100k & ADA，target=0.6 & 16.63 & 0.0111 & 0.5887 & 0.0602 \\
+\hline
+E2 & 100k & 无增强 & 18.59 & 0.0113 & 0.5572 & 0.0283 \\
+\hline
+E3 & 100k & 固定 p=0.2 & 16.47 & 0.0091 & 0.6241 & 0.0263 \\
+\hline
+E4 & 50k & ADA，target=0.6 & 15.82 & 0.0082 & 0.5471 & 0.0367 \\
+\hline
+E5 & 100k & ADA，target=0.4 & 15.48 & 0.0075 & 0.6042 & 0.0300 \\
+\hline
+\end{tabularx}
+}
+\end{center}
+\vspace{6pt}
+\begin{multicols}{2}
+\reportimage[0.95\linewidth]{\detokenize{figures/fair_fid_comparison.png}}{图 3-5　主实验与重复条件在公平预算点的 FID}
+\reportpara{固定增强 E3 呈现出不同的质量—覆盖权衡。其 FID 为 16.47，与 E1 接近；KID 为 0.0091，且 Precision 0.6241 是五个 seed 42 主实验中最高的，但 Recall 0.0263 是最低的。换言之，固定增强条件下的生成样本倾向于集中于高可信度区域，但没有覆盖更多真实数据模式。这一模式的可能机制是：固定 p=0.2 的增强在训练全程保持不变，对判别器的干扰强度相对稳定，生成器可能因此学会在增强变换的掩护下优先生成判别器最容易接受的高频模式，而放弃对长尾多样性的探索。该现象说明，仅根据 FID 或 Precision 判断增强策略可能掩盖模式覆盖不足。不过，E3 没有第二个种子，因此这一解释只作为当前实验矩阵内的探索性观察。}
+\reportsubsection{3.3 重复种子：ADA 相对无增强的稳定优势}
+\reportpara{E1、E2 和 E4 各保留了两个种子的完整指标，为检验单种子结论的方向稳定性提供了基础。E1 的两次 FID 分别为 16.63 和 15.93，均低于 E2 的 18.59 和 18.87；两组观测区间没有重叠，说明在当前两个种子下，ADA 优于 noaug 的排序方向是一致的。按条件聚合后，E1 的平均 FID 为 16.28，E2 为 18.73；E1 的平均 KID 也更低，平均 Recall 为 0.0670，约为 E2 的 0.0346 的两倍，而平均 Precision 差异相对较小（0.5733 vs 0.5581）。}
+\par\end{multicols}
+\vspace{6pt}
+\begin{center}
+{\reportcaptionfont 表 3-2　保留条件的双种子聚合结果\par}
+\vspace{3pt}
+{\fontsize{8.8pt}{10pt}\selectfont\renewcommand{\arraystretch}{1.05}
+\begin{tabularx}{\linewidth}{|C{0.21\linewidth}|C{0.05\linewidth}|Y|Y|Y|Y|Y|}
+\hline
+\textbf{条件} & \textbf{n} & \textbf{FID 均值} & \textbf{FID 范围} & \textbf{KID 均值} & \textbf{Precision 均值} & \textbf{Recall 均值} \\
+\hline
+E1：100k + ADA & 2 & 16.28 & 15.93–16.63 & 0.0104 & 0.5733 & 0.0670 \\
+\hline
+E2：100k + 无增强 & 2 & 18.73 & 18.59–18.87 & 0.0118 & 0.5581 & 0.0346 \\
+\hline
+E4：50k + ADA & 2 & 14.91 & 14.01–15.82 & 0.0079 & 0.5376 & 0.0561 \\
+\hline
+\end{tabularx}
+}
+\end{center}
+\vspace{6pt}
+\begin{multicols}{2}
+\reportimage[0.55\linewidth]{\detokenize{figures/seed_fid_comparison.png}}{图 3-6　E1、E2 与 E4 的双种子 FID（均值与范围）}
+\reportpara{两个种子的结果共同支持一个有限但较稳健的判断：在本项目的 100k 数据、约 1500 kimg 预算和其余配置不变的条件下，ADA 相对无增强改善了 FID，并提高了 Recall。之所以用"有限"限定，是因为每个条件只有两个种子，两个随机条件都支持同一方向并不等同于统计显著性，也不能推断优势在其他数据集、分辨率或训练预算下必然成立。但相比只有单一种子，两个方向一致的结果已经排除了"单次实验恰好偏好某个方向"的偶然性，为后续更大规模重复提供了初始方向参考。}
+\reportsubsection{3.4 数据规模与增强目标值：更低 FID 不等于一般性最优}
+\reportpara{E4 将训练集从 100k 减少到 50k，同时保持 ADA target=0.6 和相同 kimg 预算。其两个种子的 FID 为 15.82 和 14.01，均未高于各自配对的 E1；平均 FID 为 14.91，低于 E1 的 16.28。KID 也呈相同方向。然而，E4 的跨种子跨度为 1.80，明显大于 E1 的 0.71，说明在 50k 条件下，随机初始化和子集选择对最终指标的影响更为显著，结果的稳定性弱于 100k 条件。E4 的平均 Precision 为 0.5376，也低于 E1 的 0.5733。}
+\reportpara{更重要的是，在固定 kimg 下，50k 条件会经历更多等效数据轮次。以 1500 kimg 为预算、batch size 为 64 计算，100k 数据集约被遍历 1500×1000÷100000=15 轮，而 50k 数据集约被遍历 30 轮。更多的重复曝光既可能帮助模型充分学习训练子集的特征，也可能加剧对训练集的过度拟合；ADA 虽然提供了一定程度的保护，但在远超正常等效轮次的情况下，其保护效果是否足够难以从当前数据推断。此外，E4/E4b 的训练 seed 同时决定了 50k 子集的选取，两次重复在样本组成上本身也不同。因此，该结果只能说明"50k 条件在当前固定预算下没有表现出更差的 FID"，不能据此得出"数据越少越好"或"50k 优于 100k"的一般结论。}
+\reportpara{E5 将 ADA 目标值从 0.6 降低到 0.4。其 seed 42 的 FID 为 15.48、KID 为 0.0075，是该单种子主实验矩阵中的最低值；训练结束时 ADA 概率升至约 0.376，也显著高于 E1 在相同阶段的水平（约 0.11）。target 降低意味着控制器的容忍阈值更低，会在判别器过拟合信号相对较弱时就开始提升增强概率，最终维持更高的实际增强强度。较强的增强使判别器的分类任务更难，迫使其学习更抽象的特征表示而非依赖记忆；这在一定条件下可能帮助生成器探索更广的输出空间。然而，E5 的 Recall 只有 0.0300，低于 E1 的 0.0602，说明更强的增强在本次运行中并未带来更广的模式覆盖，与 FID 改善的方向形成矛盾。由于 E5 只有一个种子，target=0.4 只能被视为值得复验的候选设置，而不是普遍最优参数。}
+\reportsubsection{3.5 固定种子视觉比较与主要失效模式}
+\reportpara{固定 seed 比较显示，E2—E5 均已学习到数据集的主要视觉语汇，包括教堂或塔楼主体、天空、植被以及类似摄影构图的前景关系。视觉上，各条件在整体场景布局上差异相对有限，但在局部细节——如建筑线条的清晰度、天际线的连贯性、植被纹理的精细程度——上存在可观察的差异。}
+\reportpara{这里复用相同 seed 只是为了让每个模型的取样过程可复现，并不意味着独立训练模型的潜空间彼此对齐，因此不能把同 seed 图像解释为语义配对或逐图因果对照。该图适合用于并列观察各条件的典型结构、细节和失效模式；条件优劣仍以总体指标、完整标注样本和重复实验为依据。}
+\reportimage[0.90\linewidth]{\detokenize{figures/p2_fixed_seed_comparison.png}}{图 3-7　E2—E5 的固定种子生成结果。E1 在公平预算点（1512 kimg）的训练快照网格显示其视觉质量与该阶段 FID 指标一致，但由于未单独保存固定种子样本，不纳入该对比图}
+\reportpara{对 E2—E5 共 64 张独立样本的失效标注进一步显示，局部纹理问题最普遍：45 张为中度、7 张为重度，合计 52 张。结构问题中，中度 32 张、重度 4 张；物体伪影中，中度 12 张、重度 5 张。相比之下，整体布局只有 3 张中度和 1 张重度。这一分布表明，模型通常能够维持可识别的场景构图，但较难稳定生成建筑边缘、塔尖、窗格、树冠等高频局部细节。这与 StyleGAN2 架构在低分辨率层（控制整体布局）与高分辨率层（控制细节纹理）之间的分工一致：高分辨率细节在有限数据条件下更容易出现拟合不足或过拟合。25 张样本还被标记为轻度多样性问题，提示重复构图或视觉母题仍然存在，表明生成分布对训练集的某些高频模式存在偏好。}
+\reportimage[0.95\linewidth]{\detokenize{figures/failure_cases_grid.png}}{图 3-8　典型结构、纹理、物体伪影与水印失效案例}
+\reportpara{按实验组观察，E2、E3、E4 和 E5 的高严重度案例数分别为 2、4、3 和 4。E4 没有出现重度物体伪影，但有 3 张重度纹理失效；E5 则有 3 张重度物体伪影，并出现更多水印相关标记。}
+\reportsubsection{3.6 水印污染：从独立样本到潜空间轨迹}
+\reportpara{在 88 张独立生成样本中，8 张被标记为明确水印，1 张为可能水印，分别约占 9.1\% 和 1.1\%。水印并不局限于单一实验条件，说明该问题不是某一次训练偶发的可视化噪声，而是模型从含有商业图库标记的数据中学习到的稳定视觉模式。这一现象的根本原因在于：对于生成器而言，水印是训练分布的一部分，从损失函数的角度看，复现水印与复现建筑外观都是"忠实学习训练分布"的体现，模型没有内在的动机将其排除。}
+\reportpara{潜空间插值提供了更细的过程证据。在 151 帧相关序列中，46 帧出现明确水印，2 帧为可能水印。由于相邻帧高度相关，这些计数不能解释为独立发生率；其价值在于显示水印会沿连续潜空间区域逐渐出现、维持一段区间并再次消失。例如审计轨迹中，0—90 帧未见水印，105—145 帧持续出现，到 150 帧又消失。这种连续性说明水印已成为生成表示中的可插值属性：它被编码进了 W 空间的某个方向或区域，当插值路径经过该区域时水印出现，离开后消失，而不是作为随机噪声附加在输出上。这一特性意味着，水印在语义上与教堂场景的其他视觉属性处于同一级别的表示层次，而不是一个可以简单滤除的表面噪声。}
+\reportwideimage[0.92\linewidth]{\detokenize{figures/watermark_trajectory.png}}{图 3-9　水印在 W 空间插值中的出现、持续与消失}
+\reportsubsection{3.7 最近邻审计：未见近像素复制，但不能排除总体记忆}
+\reportpara{为区分"学习到数据污染模式"与"直接复制训练样本"，本研究对 E1 最终模型的 8 张生成图进行了最近邻检索，并在完整训练集中使用官方 FID Inception 特征空间寻找每张图的前三个邻居。24 个生成—真实配对的特征距离介于 6.06 和 14.14 之间，说明各生成图在特征空间中与训练集最近邻之间存在一定距离，并非特征层面的完全重合。人工检查未发现近像素级复制：邻居通常共享教堂、塔楼或构图语义，但在建筑几何、背景、色彩和局部纹理上保持明显差异，表明生成图呈现的是对训练分布的重组，而非对某张训练图的直接复制。}
+\reportwideimage[0.92\linewidth]{\detokenize{figures/nn_seed0000.png}}{图 3-10　E1 生成样本（左）及其三个训练集最近邻}
+\reportpara{值得注意的是，部分真实邻居本身带有图库水印。这与生成图中的水印现象共同支持"训练数据污染被模型吸收"的解释，并为污染的传播路径提供了可见证据：模型不仅学到了教堂场景的一般视觉特征，也学到了那些被水印标记图像所代表的分布子集的特征。然而，当前 8 张样本和单一 Inception 特征空间的审计不足以证明模型整体不存在记忆行为；它只能说明本次有限检查没有观察到近像素复制。记忆风险的全面评估需要更大规模的样本、多种特征空间和专门的成员推断方法。}
+\reportsubsection{3.8 综合证据回答}
+\reportpara{围绕增强策略，双种子结果一致表明：在 100k 数据和约 1500 kimg 预算下，ADA 相对无增强取得更低 FID，并提高 Recall；固定增强则在单种子中表现出高 Precision、低 Recall 的集中化倾向，不能只凭 FID 接近 ADA 就认定其等效。围绕数据规模，50k 条件在当前固定 kimg 预算下没有表现出更差的 FID，但更多等效数据轮次、不同子集和较大的跨种子波动阻止了"少数据更优"的因果解释。围绕增强强度，target=0.4 在单种子中获得最低 FID 和 KID，却没有改善 Recall，因此只能作为后续重复实验的候选。}
+\reportpara{视觉证据补充了量化指标无法揭示的两个方面。第一，主要失效集中在局部纹理和建筑结构，而不是整体布局，与高分辨率层在有限数据下更难收敛的预期一致。第二，水印污染会跨独立样本和连续潜空间轨迹出现，说明它已成为模型表示的一部分，而非输出层的表面噪声。最近邻审计没有发现近像素复制，使"学习到污染模式"成为当前证据下更合适的解释，但记忆风险仍需用更大样本、多特征检索和专门成员推断方法继续检验。}
+\reportsubsection{3.9 讨论}
+\reportpara{本研究的核心发现不是某个配置在所有指标上占优，而是有限数据生成中的增强策略同时改变了分布距离、样本保真度和模式覆盖，三者不会因为增强策略的改变而同步向同一方向移动。ADA 相对 noaug 的 FID 优势在两个保留随机条件下方向一致，并伴随更高的平均 Recall，因此它是当前证据链中最稳定的结果。固定 p=0.2 和 ADA target=0.4 则显示出另一种模式：较低的 FID 或较高的 Precision 并不必然对应更高的 Recall，说明这两种配置对生成分布的影响路径与 ADA（target=0.6）存在实质性差异。由此，增强不能被理解为简单提高图像质量的开关，而应被理解为对判别器学习难度、生成分布集中程度和真实分布覆盖之间关系的主动调节。}
+\reportsubsubsection{3.9.1 ADA 的作用与适用边界}
+\reportpara{StyleGAN2-ADA 将有限数据 GAN 的关键困难定位为判别器过拟合，并通过动态调整增强概率维持有效的对抗信号（Karras et al., 2020b）。本研究中，100k + ADA 在两个保留随机条件下均取得低于 noaug 的 FID，平均 Recall 也更高，与 ADA 缓解判别器过快记忆训练集的机制预期一致。E1 的增强概率在训练前半段接近零，随后才逐渐升高，说明控制器并非从训练开始就施加强增强，而是根据判别器的实际过拟合状态动态改变任务难度，体现了自适应机制的核心特征。}
+\reportpara{本研究同时补充了这一机制在具体配置中的边界。ADA 的优势不是所有指标同步改善的保证；不同 target 可以改变最终增强概率，并导致 Precision 与 Recall 的重新分配。E5 将 target 从 0.6 降到 0.4 后，实际增强概率升至约 0.376，FID 和 KID 下降，但 Recall 未同步提高。这说明 target 的影响不能只通过参数数值大小直观判断，而必须结合控制器产生的实际增强轨迹和多指标结果解释。由于 E5 没有第二个随机条件，本研究只能把 target=0.4 识别为复验候选，不能将其提升为一般性调参规则。}
+\reportsubsubsection{3.9.2 分布距离与质量—覆盖张力}
+\reportpara{FID 与 KID 都在预训练特征空间中比较真实和生成分布，适合概括整体分布差异，但不能单独区分样本逼真度与覆盖范围（Heusel et al., 2017；Bińkowski et al., 2018）。本研究的 E3 为这一限制提供了直接例证：固定 p=0.2 获得接近 ADA 的 FID、主矩阵中最高的 Precision，却同时得到最低的 Recall。若只报告 FID 或展示少量清晰样本，E3 容易被解释为与 ADA 同等有效；加入 Recall 后，生成分布向少数可信模式集中的可能性才显现出来。这一发现对于课程实验具有直接的方法论意义：报告多个维度的指标，不仅是统计完整性的要求，更是避免误导性结论的必要条件。}
+\reportpara{这一结果与改进 Precision/Recall 指标区分"生成样本落入真实流形"与"真实流形被生成分布覆盖"的设计目标一致（Kynkäänniemi et al., 2019）。它进一步说明，课程复现实验中的"最佳模型"必须先说明评价目标：若重视少量高可信样本，Precision 较高可能有实际价值；若重视数据分布的广泛覆盖，则 Recall 不能被较低的 FID 取代。本研究因此不建立单一综合分数，而是把指标间不一致本身作为需要报告的实验结果。}
+\reportsubsubsection{3.9.3 数据规模、曝光预算与可比性}
+\reportpara{LSUN 的大规模场景数据为无条件场景生成提供了基础（Yu et al., 2015），但从完整类别中抽取 50k 或 100k 子集后，训练条件不仅由"有多少张不同图像"决定，也由每张图像在固定 kimg 预算下被重复看到多少次决定。数据独特性、重复曝光和增强正则化三者之间的关系在当前实验条件下难以拆开：50k 条件的较好 FID 可能来自更充分的重复学习，也可能来自 ADA 在较强曝光压力下调整增强的方式，还可能受子集本身的视觉组成影响。这一区分修正了"数据规模越大，结果必然越好"的直线式预期，也防止走向相反的错误结论。只有同时控制训练图像曝光量、等效轮次和子集内容，才能进一步识别数据规模本身的作用。}
+\reportsubsubsection{3.9.4 数据污染与训练样本记忆的区分}
+\reportpara{水印结果揭示了常规分布指标难以表达的评价问题。真实数据中若包含商业图库标记，生成器复现这类模式可能不会被 FID 或 KID 视为明显错误，因为污染本身属于被比较的真实分布。独立生成样本和连续潜空间轨迹中均出现水印，且水印会沿插值过程逐渐出现并消失，说明模型已经把它编码为可生成的视觉属性。对应用者而言，这种"忠实学习数据分布"却可能构成不希望出现的输出，因此数据质量不能由生成指标替代：在使用 LSUN 或类似包含图库图像的数据集时，需要预先评估数据污染程度，或在生成结果中明确标注来源与限制。}
+\reportpara{最近邻审计又表明，学习污染模式不等同于复制特定训练图像。在当前 8 个生成样本中，最近邻与生成图共享教堂或塔楼语义，但没有观察到近像素复制；部分真实近邻自身带有水印，也为污染来源提供了可见证据。合理的结论是模型学习并重组了训练分布中的污染特征，而不是已经证明某张训练图被直接记忆。同样，有限样本和单一 Inception 特征空间也不足以证明模型整体不存在记忆。将"污染复现"和"样本记忆"分开，是避免对生成模型风险作过强判断的必要步骤，也是此类审计的方法论前提。}
+\reportsection{4. 结论}
+\reportpara{本研究围绕 LSUN Church Outdoor 256×256 场景，考察了增强策略、数据规模和 ADA target 对 StyleGAN2-ADA 生成质量、分布覆盖与训练行为的影响。实验采用配置驱动的统一工程框架，以约 1500 kimg 作为公平比较点，将 FID、KID、Precision、Recall 和多种定性审计纳入同一证据链。}
+\reportpara{结果表明，在 100k 数据和约 1500 kimg 的统一预算下，ADA 相对 noaug 在两个保留随机条件中均取得更低 FID，并提高平均 Recall，是当前最稳健的实验结论。这一结果与 ADA 通过自适应增强缓解判别器过拟合的机制预期一致，并在本研究的有限重复条件下得到验证。固定 p=0.2 在单随机条件下表现出高 Precision、低 Recall，说明较好的样本保真度可能伴随覆盖收缩，评价时不能只依赖 FID；target=0.4 获得单随机条件下最低的 FID 和 KID，但未改善 Recall，且 ADA 概率轨迹显示实际增强强度显著高于 target=0.6，因此不能被认定为普遍最优设置，需要更多种子验证。}
+\reportpara{数据规模结果显示，50k 条件在固定图像曝光预算下没有表现出更差的 FID，平均指标甚至略优于 100k；但更多等效轮次、不同子集和较大的跨随机条件波动排除了"数据越少越好"的解释，结果更合理地归因于曝光量、子集构成和 ADA 三者共同作用。视觉审计进一步发现，模型的主要失效集中于局部纹理与建筑结构，训练数据中的水印还会被学习为可沿潜空间连续变化的生成属性，在独立样本和插值轨迹中均有体现。当前最近邻检查没有观察到近像素复制，支持"污染学习"而非"样本记忆"的解释，但覆盖范围不足以排除总体记忆风险。}
+\reportpara{因此，本研究明确了各类结论成立的证据层级：ADA 的相对优势得到有限重复支持，数据规模效应受预算和子集构造约束，target 与固定增强结果仍需复验，污染学习与样本记忆必须分开审计。对有限数据生成项目而言，可复现的参数控制、多指标评价和数据质量检查共同决定了实验结论是否可信，而明确标注各类结论的证据强度，是使实验具有实际参考价值的前提。}
+\reportsubsection{4.1 研究贡献}
+\reportpara{本研究把有限数据生成中的方法比较转化为一条分级、可审计的证据链。相较于只报告单次 FID 的复现实验，本研究在统一后端、预算和评价分布下，将第二随机条件、KID、Precision/Recall、训练动态、失败案例、水印轨迹与最近邻审计结合起来，由此区分了三种不同强度的知识主张：ADA 相对 noaug 得到有限重复支持；50k 条件提供受曝光预算和子集混杂约束的重复观察；fixed p=0.2 与 target=0.4 只构成单随机条件探索。这一分级使实验结论能够与证据强度对应，而不是由最优单次指标决定。这对于资源受限的课程实验尤为重要：在无法进行大规模统计检验的情况下，明确哪些结论有初步跨随机条件支持、哪些只是一次性观察，比给出一个未标明不确定性的排名更诚实、也更有参考价值。}
+\reportpara{进一步而言，本研究把数据污染纳入生成质量解释，指出"更接近训练分布"与"生成内容更可用"并不等价。水印可以在潜空间中成为连续可操纵属性，而最近邻未见近像素复制又说明污染学习不能直接归结为样本记忆。该区分推进了课程实验中的评价逻辑：生成模型审计不仅要问指标是否改善，还要问模型学到了哪些不希望被学习的分布特征，以及现有证据能够支持何种风险判断。}
+\reportsubsection{4.2 研究局限}
+\reportpara{第一，实验重复覆盖不完整。E1、E2 和 E4 仅各保留两个随机条件，E3 与 E5 只有 seed 42，无法进行有意义的显著性检验，也不足以估计指标方差的稳定范围。这意味着 ADA 相对 noaug 的结果只能被视为有限重复支持，而 fixed p=0.2 和 target=0.4 的表现必须保持探索性。在更严格的实验设计中，至少需要 5 个以上的独立随机种子才能对均值和方差形成可靠估计。}
+\reportpara{第二，数据规模比较存在子集与曝光混杂。E4/E4b 的训练 seed 同时参与 50k 子集选择，两个重复条件并非在同一固定子集上只改变初始化；固定 kimg 又使 50k 条件经历更多等效轮次。此外，原始下载来源和日期因目标机 shell 历史缺失而无法恢复，水印标注也证明训练集存在可见污染。这意味着本研究不能把 E4 的指标差异归因于数据数量本身，数据治理结论也只能建立在已验证的文件哈希、结构与样本审计上，而无法追溯到采集和来源层面。}
+\reportpara{第三，分析附件和审计覆盖仍有限。E2—E5 没有与 E1 同等完整的 FID 训练曲线，E1 在 1512 kimg 公平点的固定种子样本未单独保存；人工失败分析每组仅覆盖 16 张图，最近邻审计只检查 8 张生成样本和一种特征空间。这意味着当前证据能够识别主要失效类型和明显近邻关系，却不能完整描述所有训练阶段、所有生成模式或总体记忆风险。Recall 的绝对数值在本研究中普遍偏低，这可能部分反映了评价设置（如 k-邻居参数）对该指标计算方式的影响，也可能反映了 1500 kimg 预算下模型尚未充分覆盖真实分布的事实，两种解释的相对权重需要进一步分析。}
+\reportsubsection{4.3 未来研究方向}
+\reportpara{后续实验应首先为 E3、E5 增加更多随机种子，以将这两个条件从探索性结果提升为有初步重复支持的结论，同时使 E1、E2、E4 的种子数量从 2 增加到 5 以上，以获得更可靠的均值估计和方差范围。数据规模研究可同时报告固定 kimg 与固定等效轮次两种预算，明确独特样本数量和重复曝光的各自作用：在固定等效轮次条件下，100k 和 50k 数据集的比较才能更接近"纯粹的样本数量效应"。数据治理方面，可清洗水印样本后重训并比较污染复现率及生成指标，检验清洗是否改变质量—覆盖权衡，以及数据质量与 ADA 效果之间是否存在交互。记忆审计则应扩大生成样本数量，引入多个视觉特征空间（如 CLIP 特征）和成员推断方法，使"未观察到复制"的结论覆盖更广的输出区域，从而为"模型是否记忆训练样本"提供更强的否定或确认证据。}
+\reportpagebreak
+\reportsection{5. 参考文献}
+\reportpara{Arjovsky, M., Chintala, S., \& Bottou, L. (2017). Wasserstein generative adversarial networks. \emph{Proceedings of the 34th International Conference on Machine Learning}, 70, 214–223. \url{https://proceedings.mlr.press/v70/arjovsky17a.html}}
+\reportpara{Bińkowski, M., Sutherland, D. J., Arbel, M., \& Gretton, A. (2018). Demystifying MMD GANs. \emph{International Conference on Learning Representations}. \url{https://openreview.net/forum?id=r1lUOzWCW}}
+\reportpara{Goodfellow, I. J., Pouget-Abadie, J., Mirza, M., Xu, B., Warde-Farley, D., Ozair, S., Courville, A., \& Bengio, Y. (2014). Generative adversarial nets. \emph{Advances in Neural Information Processing Systems}, 27. \url{https://papers.nips.cc/paper_files/paper/2014/hash/f033ed80deb0234979a61f95710dbe25-Abstract.html}}
+\reportpara{Heusel, M., Ramsauer, H., Unterthiner, T., Nessler, B., \& Hochreiter, S. (2017). GANs trained by a two time-scale update rule converge to a local Nash equilibrium. \emph{Advances in Neural Information Processing Systems}, 30. \url{https://proceedings.neurips.cc/paper/2017/hash/8a1d694707eb0fefe65871369074926d-Abstract.html}}
+\reportpara{Karras, T., Aila, T., Laine, S., \& Lehtinen, J. (2018). Progressive growing of GANs for improved quality, stability, and variation. \emph{International Conference on Learning Representations}. \url{https://openreview.net/forum?id=Hk99zCeAb}}
+\reportpara{Karras, T., Laine, S., \& Aila, T. (2019). A style-based generator architecture for generative adversarial networks. \emph{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, 4401–4410. \url{https://openaccess.thecvf.com/content_CVPR_2019/html/Karras_A_Style-Based_Generator_Architecture_for_Generative_Adversarial_Networks_CVPR_2019_paper.html}}
+\reportpara{Karras, T., Laine, S., Aittala, M., Hellsten, J., Lehtinen, J., \& Aila, T. (2020a). Analyzing and improving the image quality of StyleGAN. \emph{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, 8110–8119. \url{https://openaccess.thecvf.com/content_CVPR_2020/html/Karras_Analyzing_and_Improving_the_Image_Quality_of_StyleGAN_CVPR_2020_paper.html}}
+\reportpara{Karras, T., Aittala, M., Hellsten, J., Laine, S., Lehtinen, J., \& Aila, T. (2020b). Training generative adversarial networks with limited data. \emph{Advances in Neural Information Processing Systems}, 33. \url{https://proceedings.neurips.cc/paper/2020/hash/8d30aa96e72440759f74bd2306c1fa3d-Abstract.html}}
+\reportpara{Kynkäänniemi, T., Karras, T., Laine, S., Lehtinen, J., \& Aila, T. (2019). Improved precision and recall metric for assessing generative models. \emph{Advances in Neural Information Processing Systems}, 32. \url{https://proceedings.neurips.cc/paper/2019/hash/0234c510bc6d908b28c70ff313743079-Abstract.html}}
+\reportpara{Yu, F., Seff, A., Zhang, Y., Song, S., Funkhouser, T., \& Xiao, J. (2015). LSUN: Construction of a large-scale image dataset using deep learning with humans in the loop. \emph{arXiv:1506.03365}. \url{https://doi.org/10.48550/arXiv.1506.03365}}
+\reportpara{Zhao, S., Liu, Z., Lin, J., Zhu, J.-Y., \& Han, S. (2020). Differentiable augmentation for data-efficient GAN training. \emph{Advances in Neural Information Processing Systems}, 33. \url{https://proceedings.neurips.cc/paper/2020/hash/55479c55ebd1efd3ff125f1337100388-Abstract.html}}
+\reportpara{李冰, 鲜勇, 张大巧. (2021). 基于条件生成对抗网络的红外图像生成算法. \emph{光子学报}, 50(11), 1110004. \url{https://doi.org/10.3788/gzxb20215011.1110004}}
+\reportpara{李海军, 孔繁程, 牟俊杰, 刘霄, 杜贞斌, 林云. (2022). 基于ISE-StyleGAN的红外舰船图像生成算法. \emph{光子学报}, 51(12), 1210004. \url{https://doi.org/10.3788/gzxb20225112.1210004}}
+\reportpara{林森, 刘世本. (2021). 基于多尺度生成对抗网络的水下图像增强. \emph{激光与光电子学进展}, 58(16), 1610017. \url{https://doi.org/10.3788/lop202158.1610017}}
+\reportpara{孟奇, 苗华, 李琳, 国博, 刘婷婷, 米士隆. (2021). 基于双通道生成对抗网络的镜片缺陷数据增强. \emph{激光与光电子学进展}, 58(20), 2015001. \url{https://doi.org/10.3788/lop202158.2015001}}
+\reportpara{秦魁, 侯新国, 周锋, 闫正军, 卜乐平. (2023). fire-GAN：基于生成对抗网络的火焰图像生成算法. \emph{激光与光电子学进展}, 60(6), 0615005. \url{https://doi.org/10.3788/lop220989}}
+\reportpara{宋巍, 邢晶晶, 杜艳玲, 贺琪. (2021). 基于预处理图像惩罚的生成对抗网络水下图像增强. \emph{激光与光电子学进展}, 58(12), 1210024. \url{https://doi.org/10.3788/lop202158.1210024}}
+\reportpara{张印, 胡挺, 李猷兴, 王剑, 苑立波. (2024). 基于条件对抗生成网络数据增强的相敏光时域反射仪模式识别. \emph{光学学报}, 44(7), 0706001. \url{https://doi.org/10.3788/aos231392}}
+\reportpara{柯舒婷, 陈明惠, 郑泽希, 袁媛, 王腾, 何龙喜, 吕林杰, 孙好. (2022). 生成对抗网络对OCT视网膜图像的超分辨率重建. \emph{中国激光}, 49(15), 1507203. \url{https://doi.org/10.3788/cjl202249.1507203}}
+\reportpagebreak
+\reportsection{附录}
+\reportsubsection{附录 A 环境与依赖}
+\reportpara{操作系统：Ubuntu 22.04。}
+\reportpara{Python：3.12。}
+\reportpara{深度学习框架：PyTorch 2.8。}
+\reportpara{CUDA：12.8。}
+\reportpara{模型后端：NVIDIA \path|stylegan2-ada-pytorch|，提交 \texttt{\seqsplit{d72cc7d041b42ec8e806021a205ed9349f87c6a4}}。}
+\reportpara{环境定义：\path|environment.yml| 与 \path|requirements-gpu.txt|。}
+\reportpara{兼容补丁：\path|patches/| 目录中的五类补丁（PyTorch 2.x 算子适配、Pillow 接口、distutils 移除、多卡快照一致性、NumPy scalar 兼容）。}
+\reportsubsection{附录 B 关键运行命令}
+\begin{reportcode}
+conda env create -f environment.yml
+conda activate stylegan2-ada-course-blackwell
+
+python scripts/bootstrap_stylegan2_ada.py
+python scripts/preflight.py --strict
+
+python scripts/run_experiment.py train --config <config> --dry-run
+python scripts/run_experiment.py train --config <config>
+python scripts/run_experiment.py generate --config <config>
+python scripts/run_experiment.py evaluate --config <config>
+
+python scripts/analyze_results.py
+python scripts/build_evidence.py
+\end{reportcode}
+\reportpara{正式模型训练的单个实验配置使用双卡，离线 FID、KID、Precision 和 Recall 评估统一使用单卡。\path|warm-start| 仅加载网络权重并启动新训练，不恢复优化器、ADA 状态或已完成的 kimg。}
+\reportsubsection{附录 C 实验配置与证据索引}
+\reportpara{正式配置：\path|configs/baseline/|。}
+\reportpara{实验清单：\path|evidence/experiment_manifest.csv|。}
+\reportpara{结论—证据矩阵：\path|evidence/claim_evidence_matrix.csv|。}
+\reportpara{证据总索引：\path|evidence/evidence_index.md|。}
+\reportpara{汇总指标：\path|results/analysis/summary.csv|。}
+\reportpara{重复条件统计：\path|results/analysis/seed_aggregate.csv|。}
+\reportpara{数据溯源：\path|evidence/provenance/provenance_summary.md|。}
+\reportpara{最近邻审计：\path|evidence/nearest_neighbor_audit.md|。}
+\reportsubsection{附录 D 结论强度说明}
+\reportpara{本文将实验结论分为三个层级。第一，ADA 相对 noaug 的 FID 优势在两个随机条件中方向一致，属于有限重复支持：该结论在所考察的两个种子下稳定成立，但不能外推为在任意配置或数据集上的普遍规律。第二，50k 数据条件的结果受到固定 kimg 预算、等效轮次和子集差异共同约束，只能作为有边界的重复观察：结论的成立依赖于当前具体的预算和子集构造，改变任何一个前提条件都可能使排序发生变化。第三，固定 \path|p=0.2| 与 \path|target=0.4| 仅有单随机条件，均属于探索性结果：这两个配置的表现模式值得关注和后续验证，但目前不足以作为参数推荐的依据。}
+\end{reportbody}
+\end{document}

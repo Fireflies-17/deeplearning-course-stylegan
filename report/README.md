@@ -1,14 +1,16 @@
-# 报告
+# 报告目录说明
 
-此目录用于存放报告草稿、图注、实验表格和最终课程设计报告。报告中的所有结论都应能够
-追溯到可复现的实验配置和结果文件。
+最终课程报告位于 `overleaf_project/`：
 
-## 最终报告
+| 路径 | 作用 |
+|---|---|
+| `overleaf_project/main.tex` | 最终报告 XeLaTeX 源文件 |
+| `overleaf_project/main.pdf` | 已编译的最终报告 PDF |
+| `overleaf_project/course_report_style.sty` | 课程报告样式文件 |
+| `overleaf_project/figures/` | 报告所需全部图表 |
+| `overleaf_project/.latexmkrc` | Overleaf/XeLaTeX 编译配置 |
 
-- 合并稿：`final_report.md`
-- 装配脚本：`../scripts/assemble_final_report.py`
-- 重新生成：`python scripts/assemble_final_report.py`
+上传到 Overleaf 时，直接上传 `overleaf_project/` 目录内容，并使用 XeLaTeX 编译 `main.tex`。
 
-装配脚本会合并标题摘要、引言、相关工作、方法、实验设计、结果、讨论、结论和参考文献，
-并检查一级标题、参考文献章节数量及正文图片路径。分章节草稿仍是内容源，修改章节后应重新
-运行装配脚本。
+旧版 markdown、Word 模板填充稿、课程原始材料和中间渲染页已移至本地
+`report_unused_archive_20260624-115331/`，不属于最终提交结构。

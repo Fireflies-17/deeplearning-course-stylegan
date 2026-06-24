@@ -1,6 +1,6 @@
 # StyleGAN2-ADA 课程设计项目
 
-更新时间：2026-06-13
+更新时间：2026-06-24
 
 ## 项目概述
 
@@ -17,9 +17,9 @@
 4. 用第二随机条件复核关键现象；
 5. 汇总 FID、KID、Precision、Recall、训练曲线、样本、插值、风格混合和最近邻证据。
 
-当前实验、评估、主要图表和证据链已经完成，不需要继续追加训练。正式报告的核心文献清单和
-结构大纲已经完成，正文与最终提交整理尚未开始。目标机数据文件事实已回填，实际下载来源和日期
-因 shell 历史不可用而无法恢复。具体状态见
+当前实验、评估、主要图表、证据链和中文正式报告已经完成，不需要继续追加训练。最终报告位于
+`report/overleaf_project/`，其中 `main.tex` 是 XeLaTeX 源文件，`main.pdf` 是可直接提交的报告 PDF。
+目标机数据文件事实已回填，实际下载来源和日期因 shell 历史不可用而无法恢复。具体状态见
 [项目进度清单.md](项目进度清单.md)。
 
 ## 课程要求
@@ -126,11 +126,11 @@ flowchart LR
 | `results/samples/` | 固定 seed、截断、插值和风格混合样本 |
 | `results/nn/` | 训练集最近邻结果 |
 | `evidence/` | 实验清单、结论边界、人工标注、近邻审计和证据图 |
-| `report/` | P0/P1/P2 计划与执行记录 |
-| `report/course_materials/` | 课程要求 PDF 和报告模板等原始材料 |
+| `report/` | 最终报告与报告说明 |
+| `report/overleaf_project/` | 可上传 Overleaf 的自包含 XeLaTeX 项目，含 `main.tex`、`main.pdf` 和图表 |
 | `checkpoints/` | 模型发布位置说明 |
 
-正式数据、训练结果、快照和归档包默认不纳入版本控制。
+正式数据、训练快照、旧报告归档和本地工具状态默认不纳入版本控制。
 
 ## 后端兼容修改
 
@@ -421,16 +421,14 @@ python -m unittest discover -s tests -v
 4. seed=1 回传包没有包含 `training_options.json` 和快照；
 5. E2-E5 只有最终 FID 点，不具有完整 FID 学习曲线；
 6. 最近邻真实特征提取仍为逐图处理，效率较低；
-7. 正式报告和提交包尚未开始。
+7. 旧版 markdown/doc 报告材料已移入本地归档，不作为最终提交结构的一部分。
 
 ## 相关文档
 
 - [项目进度清单.md](项目进度清单.md)：完成项、待办项和提交节点；
 - `evidence/evidence_index.md`：实验、视觉、近邻与数据溯源证据入口；
 - `data/lsun_church256.md`：数据来源、下载、转换与目标机溯源记录；
-- `report/p0_validation.md`：P0 流程验证记录；
-- `report/p1_baseline_plan.md`：P1 基线计划与验收；
-- `report/p2_experiment_plan.md`：因素矩阵、指标和结论口径；
-- `report/p2_seed_repeat_runbook.md`：seed=1 重复实验记录；
-- `report/course_materials/`：课程要求与报告模板原件；
+- `report/README.md`：最终报告目录和编译方式；
+- `report/overleaf_project/main.tex`：最终报告 XeLaTeX 源文件；
+- `report/overleaf_project/main.pdf`：最终报告 PDF；
 - `results/README.md`：结果目录说明。

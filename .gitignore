@@ -15,6 +15,8 @@ __pycache__/
 .vscode/
 
 # Tool state directories.
+/.agents/
+/.claude/
 /.ta-research-afp/
 /.review/
 
@@ -41,7 +43,27 @@ __pycache__/
 /report/course_materials/*.doc
 /report/course_materials/*.pdf
 
-# Report draft sections (superseded by final_report.md).
+# Report build intermediates and local report archives.
+/report/overleaf_project/*.aux
+/report/overleaf_project/*.log
+/report/overleaf_project/*.out
+/report/overleaf_project/*.toc
+/report/overleaf_project/*.fls
+/report/overleaf_project/*.fdb_latexmk
+/report/overleaf_project.zip
+/report_unused_archive_*/
+/fill_template*.py
+
+# Old markdown report drafts kept out of the final report tree.
+/report/final_report.md
+/report/citation_verification_final.md
+/report/literature_inventory.md
+/report/p0_validation.md
+/report/p1_baseline_plan.md
+/report/p2_experiment_plan.md
+/report/p2_seed_repeat_runbook.md
+/report/references.bib
+/report/references/
 /report/discussion.md
 /report/findings.md
 /report/introduction.md
